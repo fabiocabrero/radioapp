@@ -35,6 +35,9 @@ class Settings:
     simulator: bool = True
     rigctl_enabled: bool = False
     rigctl_port: int = 4532
+    my_ref: str = ""
+    contest_name: str = ""
+    cabrillo: dict = field(default_factory=dict)
 
     @classmethod
     def load(cls) -> "Settings":

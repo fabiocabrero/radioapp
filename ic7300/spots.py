@@ -23,6 +23,8 @@ class Spot:
     mode: str = ""
     lat: Optional[float] = None
     lon: Optional[float] = None
+    place: str = ""
+    comment: str = ""
 
 
 def parse_dx_line(line: str) -> Optional[Spot]:
@@ -92,5 +94,6 @@ def fetch_pota() -> list[Spot]:
             continue
         spots.append(Spot("POTA", s.get("activator", ""), freq, f"{s.get('reference', '')} {s.get('name', '')}".strip(),
                           str(s.get("spotTime", ""))[-8:-3] + "Z", spotter=s.get("spotter", ""), mode=s.get("mode", ""),
-                          lat=s.get("latitude"), lon=s.get("longitude")))
+                          lat=s.get("latitude"), lon=s.get("longitude"),
+                          place=s.get("locationDesc") or "", comment=s.get("comments") or ""))
     return spots

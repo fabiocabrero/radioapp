@@ -26,6 +26,9 @@ Marque **Simulador** para testar sem o rádio. Para o rádio real: no menu do IC
 - DXCC (cty.dat): país, zonas, distância e azimute a partir do seu local
 - **Mapa e propagação**: mapa-múndi offline (Natural Earth) com dia/noite, seu QTH, spots, estações FT8 decodificadas e relatos do PSK Reporter (quem te ouve / quem você ouve) com rotas; clique no mapa para distância e azimute; índices solares (SFI, A, K, manchas) e condição por banda, dia e noite, em tempo real (N0NBH/HamQSL)
 - **Ondas curtas**: grade do EiBi baixada automaticamente (temporada vigente), com o que está no ar agora, horário local do PC e UTC, idioma, alvo, distância aproximada, potência e condição de propagação da faixa; filtros por banda, idioma, texto e região; duplo clique sintoniza em AM
+- **Concursos**: calendário do WA7BNM (no ar agora e próximos 7 dias, em hora local), log de concurso com número de série automático, checagem de duplicados por banda e modo, contagem de DXCC e zonas CQ, exportação **Cabrillo 3.0** (categorias e troca variam por concurso: confira as regras)
+- **POTA**: ativadores no ar com filtros por banda, modo e busca, distância e azimute, marca dos ainda não trabalhados; duplo clique sintoniza e preenche o log. O log aceita referências POTA, SOTA e WWFF (ADIF 3.1.4: POTA_REF, SOTA_REF, WWFF_REF e os MY_*), conta os QSOs da ativação (POTA valida com 10) e exporta o ADIF só da ativação
+- **SOTA**: apenas referências no log. Os spots do SOTA não estão integrados: os termos da API do SOTA exigem aprovação do projeto para software de terceiros
 - Local: grid Maidenhead, lat/lon, GPS NMEA
 - Log com exportação ADIF, DX Cluster (telnet) e spots POTA
 

@@ -17,12 +17,14 @@ from ..bands import USE_LABELS, BandPlan
 from ..dsp.cw_decoder import CwDecoder
 from ..dsp.spectrum import AudioSpectrum
 from ..dxcc import Cty
-from ..logbook import Logbook, Qso
+from ..logbook import Logbook, Qso, ref_kind
 from ..radio import Radio, RadioState, SerialTransport, SimTransport, list_serial_ports, power_watts, s_meter_text, swr_value
 from ..rigctl import RigctlServer
 from ..settings import Settings
 from ..spots import ClusterClient, Spot, fetch_pota
+from .conteststab import ContestsTab
 from .maptab import MapTab
+from .potatab import PotaTab
 from .swltab import SwlTab
 from .widgets import FrequencyDisplay, SpectrumView
 
@@ -182,6 +184,12 @@ class MainWindow(QtWidgets.QMainWindow):
         self.tabs.addTab(self._tab_cw(), "CW")
         self.map = MapTab(self.plan, self.cty)
         self.tabs.addTab(self.map, "Mapa / Propagação")
+        self.pota = PotaTab(self.plan, self.log, lambda: (self.settings.lat, self.settings.lon) if (self.settings.lat or self.settings.lon) else None)
+        self.tabs.addTab(self.pota, "POTA")
+        self.pota.spot_chosen.connect(self._pota_chosen)
+        self.pota.spots_loaded.connect(self._pota_to_map)
+        self.contests = ContestsTab(self.settings, self.cty, lambda: self.state, lambda: self.settings.callsign)
+        self.tabs.addTab(self.contests, "Concursos")
         self.swl = SwlTab(self.plan)
         self.tabs.addTab(self.swl, "Ondas curtas")
         self.map.solar_updated.connect(self.swl.set_solar)
@@ -396,17 +404,29 @@ class MainWindow(QtWidgets.QMainWindow):
         btn_exp = QtWidgets.QPushButton("Exportar ADIF")
         for x in (self.ed_call, self.ed_rs, self.ed_rr, self.ed_name, self.ed_qgrid, self.ed_cmt, btn_add, btn_exp):
             form.addWidget(x)
+        refs = QtWidgets.QHBoxLayout()
+        self.ed_ref = QtWidgets.QLineEdit(placeholderText="Referência do contato (POTA BR-0123, SOTA PY/SP-001, WWFF PYFF-0001)")
+        self.ed_myref = QtWidgets.QLineEdit(self.settings.my_ref, placeholderText="Minha referência, se ativando")
+        btn_exp_ref = QtWidgets.QPushButton("ADIF da ativação")
+        self.lbl_act = QtWidgets.QLabel("")
+        for x in (self.ed_ref, self.ed_myref, btn_exp_ref, self.lbl_act):
+            refs.addWidget(x)
+        refs.setStretch(0, 3)
+        refs.setStretch(1, 2)
         self.ed_rs.setMaximumWidth(50)
         self.ed_rr.setMaximumWidth(50)
         self.ed_qgrid.setMaximumWidth(80)
         lay.addLayout(form)
+        lay.addLayout(refs)
         self.lbl_dxcc = QtWidgets.QLabel("")
         lay.addWidget(self.lbl_dxcc)
-        self.tbl_log = self._table(["UTC", "Indicativo", "Freq (kHz)", "Modo", "RST env.", "RST rec.", "País", "Nome", "Grid"])
+        self.tbl_log = self._table(["UTC", "Indicativo", "Freq (kHz)", "Modo", "RST env.", "RST rec.", "País", "Nome", "Grid", "Referência", "Minha ref."])
         lay.addWidget(self.tbl_log, 1)
         self.ed_call.textChanged.connect(self._lookup_call)
         btn_add.clicked.connect(self._add_qso)
-        btn_exp.clicked.connect(self._export_adif)
+        btn_exp.clicked.connect(lambda: self._export_adif(False))
+        btn_exp_ref.clicked.connect(lambda: self._export_adif(True))
+        self.ed_myref.textChanged.connect(self._myref_changed)
         self._fill_log()
         return w
 
@@ -895,8 +915,9 @@ class MainWindow(QtWidgets.QMainWindow):
         if dig and self.state.data_mode:
             mode = dig["type"] if dig["type"] in ("FT8", "FT4", "JS8", "WSPR") else "DIGI"
         self.log.add(Qso(call, self.state.freq, mode, self.ed_rs.text(), self.ed_rr.text(), self.ed_name.text(),
-                         self.ed_qgrid.text(), ent.name if ent else "", self.ed_cmt.text()))
-        for e in (self.ed_call, self.ed_name, self.ed_qgrid, self.ed_cmt):
+                         self.ed_qgrid.text(), ent.name if ent else "", self.ed_cmt.text(), ref=self.ed_ref.text(),
+                         my_ref=self.ed_myref.text()))
+        for e in (self.ed_call, self.ed_name, self.ed_qgrid, self.ed_cmt, self.ed_ref):
             e.clear()
         self._fill_log()
 
@@ -904,15 +925,62 @@ class MainWindow(QtWidgets.QMainWindow):
         qsos = self.log.all(500)
         self.tbl_log.setRowCount(len(qsos))
         for r, q in enumerate(qsos):
-            vals = (q.when, q.call, f"{q.freq / 1e3:.1f}", q.mode, q.rst_sent, q.rst_rcvd, q.country, q.name, q.grid)
+            vals = (q.when, q.call, f"{q.freq / 1e3:.1f}", q.mode, q.rst_sent, q.rst_rcvd, q.country, q.name, q.grid,
+                    q.ref, q.my_ref)
             for c, v in enumerate(vals):
                 self.tbl_log.setItem(r, c, QtWidgets.QTableWidgetItem(v))
+        self._update_activation()
 
-    def _export_adif(self) -> None:
-        path, _ = QtWidgets.QFileDialog.getSaveFileName(self, "Exportar ADIF", "log.adi", "ADIF (*.adi)")
+    def _export_adif(self, only_activation: bool = False) -> None:
+        my_ref = self.ed_myref.text().strip().upper()
+        if only_activation and not my_ref:
+            QtWidgets.QMessageBox.information(self, "ADIF", "Informe a sua referência (parque ou cume) para exportar a ativação.")
+            return
+        name = (my_ref or "log").replace("/", "_") + ".adi"
+        path, _ = QtWidgets.QFileDialog.getSaveFileName(self, "Exportar ADIF", name, "ADIF (*.adi)")
         if path:
-            n = self.log.export_adif(Path(path), self.plan.band_for)
+            n = self.log.export_adif(Path(path), self.plan.band_for, my_ref if only_activation else "", self.settings.callsign)
             self.statusBar().showMessage(f"{n} QSOs exportados.", 6000)
+
+    def _myref_changed(self, text: str) -> None:
+        self.settings.my_ref = text.strip().upper()
+        self._update_activation()
+
+    def _update_activation(self) -> None:
+        ref = self.settings.my_ref
+        if not ref:
+            self.lbl_act.setText("")
+            return
+        n = self.log.activation_count(ref)
+        kind = ref_kind(ref)
+        extra = ""
+        if kind == "POTA":
+            extra = " · ativação válida" if n >= 10 else f" · faltam {10 - n} para validar (POTA)"
+        self.lbl_act.setText(f"Hoje (UTC): {n} QSOs{extra}")
+
+    def _pota_chosen(self, spot) -> None:
+        kind = spot.mode.upper()
+        if kind == "SSB":
+            mode, data = ("LSB" if spot.freq < 10_000_000 else "USB"), False
+        elif kind == "CW":
+            mode, data = "CW", False
+        elif kind in ("FT8", "FT4"):
+            mode, data = "USB", True
+        elif kind in ("AM", "FM"):
+            mode, data = kind, False
+        else:
+            mode, data = self.plan.suggest_mode(spot.freq)
+        if self.radio:
+            self.radio.set_freq(spot.freq)
+            self.radio.set_mode(mode, data, self.state.filter)
+        else:
+            self.bridge.message.emit("Conecte ao rádio para sintonizar; indicativo e parque foram copiados para o log.")
+        self.ed_call.setText(spot.call)
+        self.ed_ref.setText(spot.info.split(" ", 1)[0])
+
+    def _pota_to_map(self, spots) -> None:
+        for s in spots[:150]:
+            self.map.add_spot(s.call, s.freq, s.info, s.lat, s.lon)
 
     # ---------------------------------------------------------------- local
     def _grid_to_ll(self) -> None:
