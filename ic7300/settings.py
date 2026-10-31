@@ -8,7 +8,8 @@ from pathlib import Path
 
 
 def app_dir() -> Path:
-    base = Path(os.environ.get("APPDATA", Path.home())) / "IC7300App"
+    override = os.environ.get("IC7300_APPDATA")  # pasta alternativa (testes, instalação portátil)
+    base = Path(override) if override else Path(os.environ.get("APPDATA", Path.home())) / "IC7300App"
     base.mkdir(parents=True, exist_ok=True)
     return base
 

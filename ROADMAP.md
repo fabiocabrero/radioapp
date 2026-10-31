@@ -10,12 +10,13 @@ Objetivo: uma única estação de radioamador no PC, ligada ao IC-7300.
 - Ondas curtas com horários (EiBi)
 - Concursos (calendário, log, Cabrillo) e POTA
 - RTTY (RX/TX) e FST4/Q65/JT65/JT9/WSPR (RX, via WSJT-X)
+- SSTV Martin M1/M2 e Scottie S1/S2 (RX/TX)
 
 ## Próximas etapas (sugestão de ordem)
 2. **Mapa**: grande círculo, grid, estações decodificadas/spots, terminador dia-noite
 3. **Propagação em tempo real**: índice solar/SFI, K/A, MUF, previsão por banda (fontes públicas) + spots PSK Reporter / RBN
 5. **SOTA / WWFF / IOTA**: spots (SOTA depende de aprovação do projeto para a API), referências de cumes e ilhas; regras de pontuação por concurso
 7. **Plano de bandas por país** a partir da localização (Brasil, Região 1/2/3), com potência e classes de licença
-8. **Modos digitais que faltam**: PSK31 (precisa da tabela Varicode validada contra outro software), JS8 (use o JS8Call pelo servidor rigctl), SSTV, ARDOP/Winlink (Pat), NAVTEX; TX de FST4/Q65/WSPR
+8. **Modos digitais que faltam**: PSK31 (precisa da tabela Varicode validada contra outro software), JS8 (use o JS8Call pelo servidor rigctl), SSTV Robot e PD, interoperabilidade do SSTV testada com MMSSTV/QSSTV, ARDOP/Winlink (Pat), NAVTEX; TX de FST4/Q65/WSPR
 9. **Voz**: gravador, mensagens de voz, DVK, equalização de TX
 10. **Rede**: operação remota, QRZ/HamQTH, Wavelog/LoTW/eQSL

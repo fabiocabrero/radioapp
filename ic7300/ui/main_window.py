@@ -24,6 +24,7 @@ from ..settings import Settings
 from ..spots import ClusterClient, Spot, fetch_pota
 from .conteststab import ContestsTab
 from .digitaltabs import JtTab, RttyTab
+from .sstvtab import SstvTab
 from .maptab import MapTab
 from .potatab import PotaTab
 from .swltab import SwlTab
@@ -191,6 +192,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.pota.spots_loaded.connect(self._pota_to_map)
         self.rtty = RttyTab(self.settings, lambda: self.state, self._ft_ptt, self._ft_play, lambda: self.ed_call.text().strip().upper())
         self.tabs.addTab(self.rtty, "RTTY")
+        self.sstv = SstvTab(self.settings, lambda: self.state, self._ft_ptt, self._ft_play)
+        self.tabs.addTab(self.sstv, "SSTV")
+        self.sstv.tune_requested.connect(self._sstv_tune)
         self.jt = JtTab(self.settings, self.cty, lambda: self.state)
         self.tabs.addTab(self.jt, "FST4 / Q65 / WSPR")
         self.contests = ContestsTab(self.settings, self.cty, lambda: self.state, lambda: self.settings.callsign)
@@ -604,6 +608,7 @@ class MainWindow(QtWidgets.QMainWindow):
         if self.radio:
             self.ft.feed(samples)
             self.rtty.feed(samples)
+            self.sstv.feed(samples)
             self.jt.feed(samples)
         row = self.audio_spec.push(samples)
         now = time.time()
@@ -691,6 +696,13 @@ class MainWindow(QtWidgets.QMainWindow):
             return
         self._tune(hz)
         self.radio.set_mode(mode, False, self.state.filter)
+
+    def _sstv_tune(self, hz: int, sideband: str) -> None:
+        if not self.radio:
+            self.bridge.message.emit("Conecte ao rádio (ou ao simulador) para sintonizar.")
+            return
+        self._tune(hz)
+        self.radio.set_mode(sideband, True, self.state.filter)
 
     def _click_tune(self, hz: int) -> None:
         step = self.cb_step.currentData() or 100

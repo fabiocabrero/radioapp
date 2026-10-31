@@ -31,6 +31,7 @@ Marque **Simulador** para testar sem o rádio. Para o rádio real: no menu do IC
 - **SOTA**: apenas referências no log. Os spots do SOTA não estão integrados: os termos da API do SOTA exigem aprovação do projeto para software de terceiros
 - **RTTY** (nativo): recepção e transmissão em AFSK (45,45/50/75/100 baud, marca e shift ajustáveis, REV, UOS), validado por ida e volta com ruído
 - **FST4, Q65, JT65, JT9 e WSPR** (só recepção): usa o `jt9.exe` e o `wsprd.exe` do WSJT-X instalado no PC, em slots alinhados ao relógio UTC. FST4 e Q65 foram validados com os simuladores do WSJT-X; JT65, JT9 e WSPR (marcados com *) usam o mesmo caminho, mas não foram validados com sinais reais
+- **SSTV** (nativo): recepção contínua de Martin M1/M2 e Scottie S1/S2 com detecção do código VIS, correção da deriva de relógio por sincronismo de linha e imagens salvas numa galeria; transmissão de uma imagem (escolhida no PC) com legenda "CQ CQ SSTV" e seu indicativo; frequências de chamada para sintonizar com um clique. Validado por ida e volta (erro médio de 0,8 em 255 sem ruído; 300 ppm de deriva toleradas), **não** testado contra outros programas de SSTV (MMSSTV, QSSTV) nem no ar
 - Local: grid Maidenhead, lat/lon, GPS NMEA
 - Log com exportação ADIF, DX Cluster (telnet) e spots POTA
 
