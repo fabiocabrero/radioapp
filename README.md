@@ -24,6 +24,7 @@ Marque **Simulador** para testar sem o rádio. Para o rádio real: no menu do IC
 - Frequências de FT8/FT4/JS8/WSPR/FT2/GhostNet (tabela do firmware X6100), sintoniza em USB + DATA
 - Decodificador de CW (tom automático, WPM adaptativo) e envio de CW pelo manipulador do rádio, macros F1-F8
 - DXCC (cty.dat): país, zonas, distância e azimute a partir do seu local
+- **Mapa e propagação**: mapa-múndi offline (Natural Earth) com dia/noite, seu QTH, spots, estações FT8 decodificadas e relatos do PSK Reporter (quem te ouve / quem você ouve) com rotas; clique no mapa para distância e azimute; índices solares (SFI, A, K, manchas) e condição por banda, dia e noite, em tempo real (N0NBH/HamQSL)
 - Local: grid Maidenhead, lat/lon, GPS NMEA
 - Log com exportação ADIF, DX Cluster (telnet) e spots POTA
 

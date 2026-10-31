@@ -22,6 +22,7 @@ from ..radio import Radio, RadioState, SerialTransport, SimTransport, list_seria
 from ..rigctl import RigctlServer
 from ..settings import Settings
 from ..spots import ClusterClient, Spot, fetch_pota
+from .maptab import MapTab
 from .widgets import FrequencyDisplay, SpectrumView
 
 MODE_BUTTONS = ["LSB", "USB", "CW", "CW-R", "AM", "FM", "RTTY"]
@@ -178,6 +179,8 @@ class MainWindow(QtWidgets.QMainWindow):
         split.addWidget(self.spectrum)
         self.tabs = QtWidgets.QTabWidget()
         self.tabs.addTab(self._tab_cw(), "CW")
+        self.map = MapTab(self.plan, self.cty)
+        self.tabs.addTab(self.map, "Mapa / Propagação")
         self.tabs.addTab(self._tab_ft(), "FT8 / FT4")
         self.tabs.addTab(self._tab_digital(), "Modos digitais")
         self.tabs.addTab(self._tab_bands(), "Plano de bandas")
@@ -467,6 +470,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.bridge.ft_rx.connect(self._on_ft_rx)
         self.bridge.ft_msg.connect(lambda m: (self.lbl_ft.setText(m), self.statusBar().showMessage(m, 8000)))
         self._fill_digital()
+        self.map.set_home(self.settings.lat, self.settings.lon, self.settings.callsign)
 
     # --------------------------------------------------------------- conexão
     def _refresh_ports(self) -> None:
@@ -747,6 +751,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 ent = self.cty.lookup(c)
                 if ent:
                     country = ent.name
+            self.map.add_ft_message(d.text, d.snr, d.freq)
             self.tbl_ft.insertRow(0)
             for c, v in enumerate((utc, str(d.snr), f"{d.dt:+.1f}", str(d.freq), d.text, country)):
                 item = QtWidgets.QTableWidgetItem(v)
@@ -834,6 +839,7 @@ class MainWindow(QtWidgets.QMainWindow):
         if store:
             self.spots.insert(0, spot)
             self.spots = self.spots[:300]
+        self.map.add_spot(spot.call, spot.freq, spot.info, spot.lat, spot.lon)
         ent = self.cty.lookup(spot.call)
         country, db = (ent.name, "") if ent else ("?", "")
         if ent and (self.settings.lat or self.settings.lon):
@@ -914,6 +920,7 @@ class MainWindow(QtWidgets.QMainWindow):
         s.grid = self.ed_mygrid.text().strip()
         s.lat, s.lon = self.sp_lat.value(), self.sp_lon.value()
         s.save()
+        self.map.set_home(s.lat, s.lon, s.callsign)
         self.lbl_grid.setText(f"{s.callsign}  {s.grid}")
         self.statusBar().showMessage("Local salvo.", 4000)
 
@@ -941,6 +948,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.sp_lat.setValue(lat)
         self.sp_lon.setValue(lon)
         self.ed_mygrid.setText(geo.latlon_to_grid(lat, lon))
+        self.map.set_home(lat, lon, self.settings.callsign)
         self.lbl_gps.setText(f"Posição do GPS: {lat:.5f}, {lon:.5f} ({self.ed_mygrid.text()})")
 
     # ---------------------------------------------------------------- misc
