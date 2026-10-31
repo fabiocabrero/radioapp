@@ -13,7 +13,7 @@ from .. import audio as audio_mod
 from .. import civ, geo
 from .. import ft8 as ft8_mod
 from ..ftengine import FtEngine, RxLine, suggest_reply
-from ..bands import USE_LABELS, BandPlan
+from ..bands import MODE_LABELS, USE_LABELS, BandPlan, choose_plan
 from ..dsp.cw_decoder import CwDecoder
 from ..dsp.spectrum import AudioSpectrum
 from ..dxcc import Cty
@@ -46,6 +46,7 @@ class Bridge(QtCore.QObject):
     pota = QtCore.Signal(object)
     ft_rx = QtCore.Signal(object)
     ft_msg = QtCore.Signal(str)
+    ft_stop = QtCore.Signal()
 
 
 class MainWindow(QtWidgets.QMainWindow):
@@ -56,6 +57,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.settings = Settings.load()
         self.plan = BandPlan()
         self.cty = Cty()
+        self.plan.select(self._resolve_plan())
         self.log = Logbook()
         self.bridge = Bridge()
         self.radio: Optional[Radio] = None
@@ -144,14 +146,10 @@ class MainWindow(QtWidgets.QMainWindow):
         row.addWidget(self.cb_step)
         ctrl.addLayout(row)
         row2 = QtWidgets.QHBoxLayout()
+        self.band_row = row2
         self.band_btns: dict[str, QtWidgets.QPushButton] = {}
-        for name in self.plan.band_names():
-            b = QtWidgets.QPushButton(name)
-            b.setMaximumWidth(52)
-            b.clicked.connect(lambda _=False, n=name: self._goto_band(n))
-            row2.addWidget(b)
-            self.band_btns[name] = b
         ctrl.addLayout(row2)
+        self._rebuild_band_buttons()
         row3 = QtWidgets.QHBoxLayout()
         self.lbl_seg = QtWidgets.QLabel("")
         self.lbl_seg.setStyleSheet("font-weight:600")
@@ -362,19 +360,94 @@ class MainWindow(QtWidgets.QMainWindow):
     def _tab_bands(self) -> QtWidgets.QWidget:
         w = QtWidgets.QWidget()
         lay = QtWidgets.QVBoxLayout(w)
+        self.lbl_plan = QtWidgets.QLabel("")
+        self.lbl_plan.setStyleSheet("font: 600 11pt")
+        self.lbl_plan.setWordWrap(True)
+        lay.addWidget(self.lbl_plan)
         self.lbl_band_now = QtWidgets.QLabel("")
         self.lbl_band_now.setStyleSheet("font: 600 12pt")
+        self.lbl_band_now.setWordWrap(True)
         lay.addWidget(self.lbl_band_now)
-        self.tbl_bands = self._table(["Banda", "Início (kHz)", "Fim (kHz)", "Uso"])
+        self.tbl_bands = self._table(["Banda", "Início (kHz)", "Fim (kHz)", "Uso", "Modos liberados", "Classes", "Obs."])
+        self.tbl_bands.setColumnWidth(4, 260)
         lay.addWidget(self.tbl_bands, 1)
+        self.lbl_plan_src = QtWidgets.QLabel("")
+        self.lbl_plan_src.setWordWrap(True)
+        self.lbl_plan_src.setStyleSheet("color:#8a97a8; font-size:8pt")
+        lay.addWidget(self.lbl_plan_src)
+        self.tbl_bands.cellDoubleClicked.connect(
+            lambda r, c: self._tune(self.plan.segments[r].start + 1000, auto_mode=True))
+        self._fill_bands()
+        return w
+
+    def _fill_bands(self) -> None:
+        cls = self.settings.license_class
+        self.tbl_bands.setRowCount(0)
         for seg in self.plan.segments:
             r = self.tbl_bands.rowCount()
             self.tbl_bands.insertRow(r)
-            for c, v in enumerate((seg.band, f"{seg.start / 1e3:g}", f"{seg.stop / 1e3:g}", USE_LABELS.get(seg.use, seg.use))):
-                self.tbl_bands.setItem(r, c, QtWidgets.QTableWidgetItem(v))
-        self.tbl_bands.cellDoubleClicked.connect(
-            lambda r, c: self._tune(self.plan.segments[r].start + 1000, auto_mode=True))
-        return w
+            modes = ", ".join(MODE_LABELS.get(m, m) for m in seg.modes) if seg.modes else "(plano genérico)"
+            classes = "/".join(seg.classes) if seg.classes else "—"
+            vals = (seg.band, f"{seg.start / 1e3:g}", f"{seg.stop / 1e3:g}", USE_LABELS.get(seg.use, seg.use), modes, classes, seg.note)
+            for c, v in enumerate(vals):
+                item = QtWidgets.QTableWidgetItem(v)
+                if cls and seg.classes and cls not in seg.classes:
+                    item.setForeground(QtGui.QColor("#6b7685"))  # fora dos privilégios da sua classe
+                self.tbl_bands.setItem(r, c, item)
+        power = ""
+        if cls and self.plan.max_power(cls):
+            power = f" · potência máxima da classe {cls}: {self.plan.max_power(cls)} W"
+        self.lbl_plan.setText(f"Plano ativo: {self.plan.name}" + (f" · sua classe: {cls}" if cls else " · informe sua classe em Local / GPS") + power)
+        self.lbl_plan_src.setText(self.plan.info.get("source", "") + " " + self.plan.info.get("power_note", "") +
+                                  " Linhas em cinza: fora dos privilégios da sua classe. O app avisa, mas não impede, e não substitui a regulamentação.")
+
+    def _resolve_plan(self) -> str:
+        if self.settings.band_plan and self.settings.band_plan != "auto" and self.settings.band_plan in self.plan.plans:
+            return self.settings.band_plan
+        return choose_plan(self.settings.callsign, self.settings.lat, self.settings.lon, self.cty)
+
+    def _apply_plan(self) -> None:
+        self.plan.select(self._resolve_plan())
+        self._rebuild_band_buttons()
+        self._fill_bands()
+        self.spectrum._range_drawn = None
+        self.spectrum._draw_bandplan()
+        self._dig_key = None
+        self._fill_digital()
+        self._on_state(self.state)
+
+    def _rebuild_band_buttons(self) -> None:
+        while self.band_row.count():
+            item = self.band_row.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+        self.band_btns = {}
+        for name in self.plan.band_names():
+            b = QtWidgets.QPushButton(name)
+            b.setMaximumWidth(52)
+            b.clicked.connect(lambda _=False, n=name: self._goto_band(n))
+            self.band_row.addWidget(b)
+            self.band_btns[name] = b
+
+    def _tx_guard(self, category: str | None = None) -> bool:
+        """Avisa quando a transmissão agora não é compatível com o plano, a classe e a emissão; o operador decide."""
+        st = self.state
+        cat = category or self.plan.category(st.mode, st.data_mode)
+        status = self.plan.tx_status(st.freq, self.settings.license_class, cat)
+        if status.ok:
+            return True
+        answer = QtWidgets.QMessageBox.warning(
+            self, "Verifique antes de transmitir", status.text + "\n\nO app apenas avisa; a responsabilidade é do operador. "
+            "Transmitir mesmo assim?", QtWidgets.QMessageBox.StandardButton.Yes | QtWidgets.QMessageBox.StandardButton.No,
+            QtWidgets.QMessageBox.StandardButton.No)
+        return answer == QtWidgets.QMessageBox.StandardButton.Yes
+
+    def _ft_allowed(self) -> bool:  # thread de áudio: sem diálogo
+        st = self.state
+        ok = self.plan.tx_status(st.freq, self.settings.license_class, "DIG").ok
+        if not ok:
+            self.bridge.ft_stop.emit()
+        return ok
 
     def _tab_spots(self) -> QtWidgets.QWidget:
         w = QtWidgets.QWidget()
@@ -462,6 +535,17 @@ class MainWindow(QtWidgets.QMainWindow):
         form.addRow("Grid Maidenhead", self.ed_mygrid)
         form.addRow("Latitude (° , sul negativo)", self.sp_lat)
         form.addRow("Longitude (° , oeste negativo)", self.sp_lon)
+        self.cb_plan = QtWidgets.QComboBox()
+        self.cb_plan.addItem("Automático (pelo indicativo ou local)", "auto")
+        for pid, pname in self.plan.available():
+            self.cb_plan.addItem(pname, pid)
+        self.cb_plan.setCurrentIndex(max(0, self.cb_plan.findData(self.settings.band_plan)))
+        self.cb_class = QtWidgets.QComboBox()
+        for label, value in (("Não informar", ""), ("Classe A", "A"), ("Classe B", "B"), ("Classe C", "C")):
+            self.cb_class.addItem(label, value)
+        self.cb_class.setCurrentIndex(max(0, self.cb_class.findData(self.settings.license_class)))
+        form.addRow("Plano de bandas", self.cb_plan)
+        form.addRow("Classe da licença", self.cb_class)
         row = QtWidgets.QHBoxLayout()
         row.addWidget(btn_grid)
         row.addWidget(btn_ll)
@@ -502,6 +586,10 @@ class MainWindow(QtWidgets.QMainWindow):
         self.bridge.spot.connect(self._on_spot)
         self.bridge.pota.connect(self._on_pota)
         self.bridge.ft_rx.connect(self._on_ft_rx)
+        self.bridge.ft_stop.connect(self._ft_halt)
+        self.ft.tx_allowed = self._ft_allowed
+        self.rtty.guard = self._tx_guard
+        self.sstv.guard = self._tx_guard
         self.bridge.ft_msg.connect(lambda m: (self.lbl_ft.setText(m), self.statusBar().showMessage(m, 8000)))
         self._fill_digital()
         self.map.set_home(self.settings.lat, self.settings.lon, self.settings.callsign)
@@ -652,9 +740,12 @@ class MainWindow(QtWidgets.QMainWindow):
         for n, b in self.band_btns.items():
             b.setStyleSheet("background:#2e7d32" if n == band else "")
         if seg:
-            self.lbl_seg.setText(f"{seg.band} · {USE_LABELS.get(seg.use, seg.use)}")
-            self.lbl_band_now.setText(f"Frequência atual: {st.freq / 1e3:.2f} kHz — {seg.band}, {USE_LABELS.get(seg.use, seg.use)}")
-            self.lbl_seg.setStyleSheet("font-weight:600;color:#9ccc65")
+            extra = f" · classes {'/'.join(seg.classes)}" if seg.classes else ""
+            status = self.plan.tx_status(st.freq, self.settings.license_class, self.plan.category(st.mode, st.data_mode))
+            self.lbl_seg.setText(f"{seg.band} · {USE_LABELS.get(seg.use, seg.use)}{extra}")
+            self.lbl_band_now.setText(f"Frequência atual: {st.freq / 1e3:.2f} kHz — {seg.band}, {USE_LABELS.get(seg.use, seg.use)}{extra}"
+                                      + ("" if status.ok else f"\nAtenção: {status.text}"))
+            self.lbl_seg.setStyleSheet("font-weight:600;color:#9ccc65" if status.ok else "font-weight:600;color:#ffa726")
         else:
             self.lbl_seg.setText("Fora das faixas de radioamador")
             self.lbl_band_now.setText(f"Frequência atual: {st.freq / 1e3:.2f} kHz — fora das faixas de radioamador")
@@ -719,6 +810,11 @@ class MainWindow(QtWidgets.QMainWindow):
         self._tune(hz, auto_mode=True)
 
     def _ptt(self, on: bool) -> None:
+        if on and not self._tx_guard():
+            self.btn_ptt.blockSignals(True)
+            self.btn_ptt.setChecked(False)
+            self.btn_ptt.blockSignals(False)
+            return
         if self.radio:
             self.radio.set_ptt(on)
 
@@ -735,6 +831,8 @@ class MainWindow(QtWidgets.QMainWindow):
             return
         if self.state.mode not in ("CW", "CW-R"):
             self.bridge.message.emit("Coloque o rádio em CW antes de enviar.")
+            return
+        if not self._tx_guard("CW"):
             return
         self.radio.send_cw(text)
         self.txt_cw.appendPlainText(f"\n>> {text}\n")
@@ -785,6 +883,12 @@ class MainWindow(QtWidgets.QMainWindow):
                 return
         if not (self.state.mode == "USB" and self.state.data_mode):
             self.radio.set_mode("USB", True, self.state.filter)
+            self.state.mode, self.state.data_mode = "USB", True
+        if not self._tx_guard("DIG"):
+            self.chk_fttx.blockSignals(True)
+            self.chk_fttx.setChecked(False)
+            self.chk_fttx.blockSignals(False)
+            return
         self.ft.tx_enabled = True
 
     def _ft_halt(self) -> None:
@@ -1019,7 +1123,9 @@ class MainWindow(QtWidgets.QMainWindow):
         s.callsign = self.ed_mycall.text().strip().upper()
         s.grid = self.ed_mygrid.text().strip()
         s.lat, s.lon = self.sp_lat.value(), self.sp_lon.value()
+        s.band_plan, s.license_class = self.cb_plan.currentData(), self.cb_class.currentData()
         s.save()
+        self._apply_plan()
         self.map.set_home(s.lat, s.lon, s.callsign)
         self.swl.set_home(s.lat, s.lon)
         self.lbl_grid.setText(f"{s.callsign}  {s.grid}")

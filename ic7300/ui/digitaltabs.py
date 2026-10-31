@@ -38,6 +38,7 @@ class RttyTab(QtWidgets.QWidget):
         self.decoder = rtty.RttyDecoder()
         self._tx_busy = threading.Event()
         self._confirmed = False
+        self.guard: Callable[[str], bool] = lambda category: True
 
         lay = QtWidgets.QVBoxLayout(self)
         bar = QtWidgets.QHBoxLayout()
@@ -139,6 +140,8 @@ class RttyTab(QtWidgets.QWidget):
             return
         if not self.settings.callsign:
             self._status.emit("Informe seu indicativo na aba Local / GPS antes de transmitir.")
+            return
+        if not self.guard("DIG"):
             return
         if not self._confirmed and not self.settings.simulator:
             ok = QtWidgets.QMessageBox.question(self, "Transmitir RTTY", "O rádio vai TRANSMITIR agora.\n\nConfirme: antena ou carga "

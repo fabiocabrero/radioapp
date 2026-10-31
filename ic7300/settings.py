@@ -38,6 +38,8 @@ class Settings:
     rigctl_port: int = 4532
     my_ref: str = ""
     wsjtx_dir: str = ""
+    band_plan: str = "auto"
+    license_class: str = ""
     contest_name: str = ""
     cabrillo: dict = field(default_factory=dict)
 

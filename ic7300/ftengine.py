@@ -81,6 +81,7 @@ class FtEngine:
         self.tx_level = 0.5
         self.tx_enabled = False
         self.tx_text = ""
+        self.tx_allowed: Callable[[], bool] = lambda: True  # verificação do plano de bandas antes de cada slot
         self._dec = Decimator4()
         self._buf: list[np.ndarray] = []
         self._slot = -1
@@ -126,6 +127,10 @@ class FtEngine:
         if not (self.tx_enabled and self.tx_text) or self._tx_busy.is_set():
             return
         if (slot % 2 == 0) != self.tx_even:
+            return
+        if not self.tx_allowed():
+            self.tx_enabled = False
+            self.on_tx("TX desabilitado: a frequência atual não é compatível com o plano de bandas e a classe. Reabilite o TX para confirmar.")
             return
         threading.Thread(target=self._transmit, args=(self.tx_text, self.mode), daemon=True).start()
 

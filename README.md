@@ -18,8 +18,7 @@ Marque **Simulador** para testar sem o rádio. Para o rádio real: no menu do IC
 - Frequência (roda do mouse, duplo clique para digitar), modos LSB/USB/CW/CW-R/AM/FM/RTTY, DATA, filtros, passo, PTT
 - Medidores S, potência e ROE
 - Espectro e waterfall do scope do rádio (CI-V 0x27), com faixa do plano de bandas; fallback para espectro do áudio
-- Plano de bandas (`ic7300/data/bands.json`, base IARU Região 2 — confira com a Anatel), aviso de fora de faixa,
-  modo sugerido por segmento
+- **Plano de bandas por país**: Brasil (classes A/B/C, modos liberados por segmento, potência máxima por classe, balizas e repetidoras) e planos genéricos da IARU Regiões 1, 2 e 3. O plano é escolhido pelo indicativo (ou pela posição) e pode ser trocado em Local / GPS; informe sua classe para ver os privilégios e receber avisos antes de transmitir. Arquivos extras em `bandplans_custom.json` na pasta de dados do app (veja abaixo)
 - **FT8 e FT4**: decodificação contínua por slot, país de cada estação, sugestão de resposta (duplo clique), TX com PTT automático, botão de parada
 - Frequências de FT8/FT4/JS8/WSPR/FT2/GhostNet (tabela do firmware X6100), sintoniza em USB + DATA
 - Decodificador de CW (tom automático, WPM adaptativo) e envio de CW pelo manipulador do rádio, macros F1-F8
@@ -43,6 +42,18 @@ Mode = `Data/Pkt`. Em *Audio*, escolha o `USB Audio CODEC`. Assim só o app abre
 e os outros programas controlam o rádio por ele. Use um único programa por vez para transmitir (o FT8 do
 próprio app ou o WSJT-X), nunca os dois ao mesmo tempo.
 Testado com o cliente Hamlib 4 que acompanha o WSJT-X (frequência, modo, PTT, nível S) contra o simulador.
+
+## Plano de bandas: fontes e limites
+
+- **Brasil**: transcrito do *Plano de Bandas BR v3.1* (PR7GA / LABRE / QTC da ECRA), que se baseia no **Ato nº 926/2024 da Anatel**
+  (requisitos técnicos e operacionais). As classes e os modos por segmento foram lidos do gráfico, não de uma tabela em texto. Potências:
+  Classe A 1500 W, B 1000 W, C 100 W; 60 m: 25 W EIRP. Não consegui abrir o texto oficial do Ato 926 (o site da Anatel estava em
+  manutenção): **confira os limites no Ato vigente antes de transmitir**. O Ato 3448/2026 (requisitos operacionais) mantém as classes A, B e C.
+- **IARU R1/R2/R3**: genéricos (alocações da UIT por região e uso típico); não trazem classes nem potências. Para outro país, copie
+  `ic7300/data/bandplans.json` para `bandplans_custom.json` na pasta de dados (`%APPDATA%\IC7300App`) e edite: planos com o mesmo id
+  substituem os do app, ids novos aparecem na lista.
+- O app **avisa**, não impede: fora da faixa, classe sem privilégio, modo não liberado, balizas e repetidoras. No FT8 automático, o TX
+  é desabilitado se a frequência sair dos privilégios. A responsabilidade da operação é sempre do operador.
 
 ## Estado e limites
 

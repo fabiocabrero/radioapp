@@ -53,6 +53,7 @@ class SstvTab(QtWidgets.QWidget):
         self._tx_image: np.ndarray | None = None
         self._tx_busy = threading.Event()
         self._confirmed = False
+        self.guard: Callable[[str], bool] = lambda category: True
         self._src_image: QtGui.QImage | None = None
         self.gallery = app_dir() / "sstv"
         self.gallery.mkdir(exist_ok=True)
@@ -238,6 +239,8 @@ class SstvTab(QtWidgets.QWidget):
             self._status.emit("Informe seu indicativo na aba Local / GPS antes de transmitir.")
             return
         mode = sstv.MODES[self.cb_mode.currentData()]
+        if not self.guard("OUT"):
+            return
         if not self._confirmed and not self.settings.simulator:
             seconds = mode.line_ms * mode.height / 1000 + 4
             ok = QtWidgets.QMessageBox.question(self, "Transmitir SSTV", f"O rádio vai TRANSMITIR por cerca de {seconds:.0f} s.\n\n"
