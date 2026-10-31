@@ -11,6 +11,8 @@ from PySide6 import QtCore, QtGui, QtWidgets
 
 from .. import audio as audio_mod
 from .. import civ, geo
+from .. import ft8 as ft8_mod
+from ..ftengine import FtEngine, RxLine, suggest_reply
 from ..bands import USE_LABELS, BandPlan
 from ..dsp.cw_decoder import CwDecoder
 from ..dsp.spectrum import AudioSpectrum
@@ -35,6 +37,8 @@ class Bridge(QtCore.QObject):
     cw_text = QtCore.Signal(str)
     spot = QtCore.Signal(object)
     pota = QtCore.Signal(object)
+    ft_rx = QtCore.Signal(object)
+    ft_msg = QtCore.Signal(str)
 
 
 class MainWindow(QtWidgets.QMainWindow):
@@ -53,6 +57,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.gps: Optional[geo.GpsReader] = None
         self.state = RadioState()
         self.cw = CwDecoder()
+        self.ft = FtEngine(self.bridge.ft_rx.emit, self.bridge.ft_msg.emit, self._ft_ptt, self._ft_play)
         self.audio_spec = AudioSpectrum()
         self._last_scope = 0.0
         self._last_audio_row = 0.0
@@ -167,6 +172,7 @@ class MainWindow(QtWidgets.QMainWindow):
         split.addWidget(self.spectrum)
         self.tabs = QtWidgets.QTabWidget()
         self.tabs.addTab(self._tab_cw(), "CW")
+        self.tabs.addTab(self._tab_ft(), "FT8 / FT4")
         self.tabs.addTab(self._tab_digital(), "Modos digitais")
         self.tabs.addTab(self._tab_bands(), "Plano de bandas")
         self.tabs.addTab(self._tab_spots(), "DX Cluster / POTA")
@@ -248,6 +254,58 @@ class MainWindow(QtWidgets.QMainWindow):
         btn_stop.clicked.connect(lambda: self.radio and self.radio.stop_cw())
         self.sp_tone.valueChanged.connect(self._tone_changed)
         self.chk_auto_tone.toggled.connect(self._tone_changed)
+        return w
+
+    def _tab_ft(self) -> QtWidgets.QWidget:
+        w = QtWidgets.QWidget()
+        lay = QtWidgets.QVBoxLayout(w)
+        top = QtWidgets.QHBoxLayout()
+        self.cb_ftmode = QtWidgets.QComboBox()
+        self.cb_ftmode.addItems(["FT8", "FT4"])
+        self.sp_ftfreq = QtWidgets.QSpinBox()
+        self.sp_ftfreq.setRange(200, 3000)
+        self.sp_ftfreq.setValue(1500)
+        self.sp_ftfreq.setSuffix(" Hz")
+        self.cb_ftslot = QtWidgets.QComboBox()
+        self.cb_ftslot.addItems(["TX em slots pares (:00/:30)", "TX em slots ímpares (:15/:45)"])
+        self.sl_level = QtWidgets.QSlider(QtCore.Qt.Orientation.Horizontal)
+        self.sl_level.setRange(5, 100)
+        self.sl_level.setValue(30)
+        self.sl_level.setMaximumWidth(120)
+        self.lbl_slot = QtWidgets.QLabel("")
+        self.lbl_slot.setStyleSheet("font: 600 12pt 'Consolas'")
+        for x in (QtWidgets.QLabel("Modo"), self.cb_ftmode, QtWidgets.QLabel("Tom TX"), self.sp_ftfreq, self.cb_ftslot,
+                  QtWidgets.QLabel("Nível"), self.sl_level):
+            top.addWidget(x)
+        top.addStretch()
+        top.addWidget(self.lbl_slot)
+        lay.addLayout(top)
+        self.tbl_ft = self._table(["UTC", "SNR", "DT", "Freq", "Mensagem", "País"])
+        lay.addWidget(self.tbl_ft, 1)
+        tx = QtWidgets.QHBoxLayout()
+        self.ed_fttx = QtWidgets.QLineEdit()
+        self.ed_fttx.setPlaceholderText("Mensagem a transmitir (ex.: CQ PY2XX GG66). Duplo clique numa linha sugere a resposta")
+        self.chk_fttx = QtWidgets.QCheckBox("Habilitar TX")
+        self.btn_cq = QtWidgets.QPushButton("CQ")
+        self.btn_halt = QtWidgets.QPushButton("Parar TX")
+        self.btn_halt.setStyleSheet("background:#8e2420")
+        for x in (self.ed_fttx, self.btn_cq, self.chk_fttx, self.btn_halt):
+            tx.addWidget(x)
+        tx.setStretch(0, 1)
+        lay.addLayout(tx)
+        self.lbl_ft = QtWidgets.QLabel("" if ft8_mod.available() else
+                                       "ft8.dll não encontrada: rode 'python build_native.py' para compilar o decoder.")
+        lay.addWidget(self.lbl_ft)
+        self.ft.tx_level = 0.3
+        self.cb_ftmode.currentTextChanged.connect(self._ft_mode)
+        self.sp_ftfreq.valueChanged.connect(lambda v: setattr(self.ft, "tx_freq", float(v)))
+        self.cb_ftslot.currentIndexChanged.connect(lambda i: setattr(self.ft, "tx_even", i == 0))
+        self.sl_level.valueChanged.connect(lambda v: setattr(self.ft, "tx_level", v / 100))
+        self.ed_fttx.textChanged.connect(lambda t: setattr(self.ft, "tx_text", t.strip().upper()))
+        self.btn_cq.clicked.connect(self._ft_cq)
+        self.chk_fttx.toggled.connect(self._ft_tx_toggled)
+        self.btn_halt.clicked.connect(self._ft_halt)
+        self.tbl_ft.cellDoubleClicked.connect(self._ft_reply)
         return w
 
     def _tab_digital(self) -> QtWidgets.QWidget:
@@ -397,6 +455,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.bridge.cw_text.connect(self._on_cw_text)
         self.bridge.spot.connect(self._on_spot)
         self.bridge.pota.connect(self._on_pota)
+        self.bridge.ft_rx.connect(self._on_ft_rx)
+        self.bridge.ft_msg.connect(lambda m: (self.lbl_ft.setText(m), self.statusBar().showMessage(m, 8000)))
         self._fill_digital()
 
     # --------------------------------------------------------------- conexão
@@ -479,6 +539,8 @@ class MainWindow(QtWidgets.QMainWindow):
         text = self.cw.process(samples)
         if text:
             self.bridge.cw_text.emit(text)
+        if self.radio:
+            self.ft.feed(samples)
         row = self.audio_spec.push(samples)
         now = time.time()
         if row is not None and now - self._last_audio_row > 0.08:
@@ -598,6 +660,87 @@ class MainWindow(QtWidgets.QMainWindow):
         self.cw.auto_tone = self.chk_auto_tone.isChecked()
         if not self.cw.auto_tone:
             self.cw.tone = float(self.sp_tone.value())
+
+    # ---------------------------------------------------------------- FT8 / FT4
+    def _ft_ptt(self, on: bool) -> None:
+        if self.radio:
+            self.radio.set_ptt(on)
+
+    def _ft_play(self, samples: np.ndarray) -> None:  # thread de TX
+        if self.chk_sim.isChecked():
+            time.sleep(len(samples) / audio_mod.FS)
+            return
+        audio_mod.play_blocking(samples, self.settings.audio_output or audio_mod.find_radio_output())
+
+    def _ft_mode(self, mode: str) -> None:
+        self.ft.set_mode(mode)
+        self.tbl_ft.setRowCount(0)
+
+    def _ft_cq(self) -> None:
+        call, grid = self.settings.callsign, self.settings.grid[:4]
+        if not call:
+            QtWidgets.QMessageBox.information(self, "FT8", "Informe seu indicativo na aba Local / GPS.")
+            return
+        self.ed_fttx.setText(f"CQ {call} {grid}".strip())
+
+    def _ft_tx_toggled(self, on: bool) -> None:
+        if not on:
+            self.ft.tx_enabled = False
+            return
+        if not self.settings.callsign or not self.radio:
+            QtWidgets.QMessageBox.information(self, "FT8", "Conecte ao rádio e informe seu indicativo antes de transmitir.")
+            self.chk_fttx.setChecked(False)
+            return
+        if not self.chk_sim.isChecked():
+            ok = QtWidgets.QMessageBox.question(
+                self, "Habilitar transmissão",
+                "O rádio vai TRANSMITIR automaticamente nos slots escolhidos.\n\n"
+                "Confirme: relógio do PC sincronizado, antena ou carga conectada, nível do USB MOD ajustado "
+                "(ALC sem acionar) e frequência livre.\n\nHabilitar TX?")
+            if ok != QtWidgets.QMessageBox.StandardButton.Yes:
+                self.chk_fttx.setChecked(False)
+                return
+        if not (self.state.mode == "USB" and self.state.data_mode):
+            self.radio.set_mode("USB", True, self.state.filter)
+        self.ft.tx_enabled = True
+
+    def _ft_halt(self) -> None:
+        self.ft.halt()
+        self.chk_fttx.blockSignals(True)
+        self.chk_fttx.setChecked(False)
+        self.chk_fttx.blockSignals(False)
+
+    def _on_ft_rx(self, lines: list[RxLine]) -> None:
+        my = self.settings.callsign.upper()
+        for line in lines:
+            d = line.decode
+            utc = datetime.fromtimestamp(line.slot_start, timezone.utc).strftime("%H:%M:%S")
+            country = ""
+            for c in d.callsigns():
+                ent = self.cty.lookup(c)
+                if ent:
+                    country = ent.name
+            self.tbl_ft.insertRow(0)
+            for c, v in enumerate((utc, str(d.snr), f"{d.dt:+.1f}", str(d.freq), d.text, country)):
+                item = QtWidgets.QTableWidgetItem(v)
+                if my and my in d.text.split():
+                    item.setBackground(QtGui.QColor(120, 40, 40))
+                elif d.text.startswith("CQ"):
+                    item.setBackground(QtGui.QColor(30, 80, 40))
+                self.tbl_ft.setItem(0, c, item)
+        while self.tbl_ft.rowCount() > 400:
+            self.tbl_ft.removeRow(self.tbl_ft.rowCount() - 1)
+
+    def _ft_reply(self, row: int, _col: int) -> None:
+        text = self.tbl_ft.item(row, 4).text()
+        snr = int(self.tbl_ft.item(row, 1).text())
+        sug = suggest_reply(self.settings.callsign, text, self.settings.grid, snr)
+        if not sug:
+            self.statusBar().showMessage("Mensagem não é um CQ nem dirigida a você.", 5000)
+            return
+        call, msg = sug
+        self.ed_fttx.setText(msg)
+        self.ed_call.setText(call)
 
     # ---------------------------------------------------------------- digital
     def _fill_digital(self) -> None:
@@ -776,6 +919,8 @@ class MainWindow(QtWidgets.QMainWindow):
     # ---------------------------------------------------------------- misc
     def _tick(self) -> None:
         self.lbl_utc.setText(datetime.now(timezone.utc).strftime("UTC %H:%M:%S"))
+        self.lbl_slot.setText(f"slot {self.ft.seconds_into_slot():4.1f}/{self.ft.slot_len:.1f} s"
+                              + ("  ● TX" if self.state.ptt else ""))
         s = self.settings
         self.lbl_grid.setText(f"{s.callsign or 'sem indicativo'}  {s.grid}")
 

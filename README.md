@@ -20,6 +20,7 @@ Marque **Simulador** para testar sem o rádio. Para o rádio real: no menu do IC
 - Espectro e waterfall do scope do rádio (CI-V 0x27), com faixa do plano de bandas; fallback para espectro do áudio
 - Plano de bandas (`ic7300/data/bands.json`, base IARU Região 2 — confira com a Anatel), aviso de fora de faixa,
   modo sugerido por segmento
+- **FT8 e FT4**: decodificação contínua por slot, país de cada estação, sugestão de resposta (duplo clique), TX com PTT automático, botão de parada
 - Frequências de FT8/FT4/JS8/WSPR/FT2/GhostNet (tabela do firmware X6100), sintoniza em USB + DATA
 - Decodificador de CW (tom automático, WPM adaptativo) e envio de CW pelo manipulador do rádio, macros F1-F8
 - DXCC (cty.dat): país, zonas, distância e azimute a partir do seu local
@@ -30,4 +31,6 @@ Marque **Simulador** para testar sem o rádio. Para o rádio real: no menu do IC
 
 - Testado com o simulador incluído e testes automáticos (`pytest`). **Ainda não foi testado com um IC-7300 real.**
   Pontos a validar no rádio: formato dos quadros do scope (0x27), comando de largura do scope e leitura DATA (0x1A 06).
-- Decodificação de FT8/FT4/JS8/WSPR, Winlink/ARDOP, SSTV, NAVTEX e CW trainer ainda não estão embutidos.
+- Ainda não embutidos: JS8, WSPR, Winlink/ARDOP, SSTV, NAVTEX e CW trainer (veja ROADMAP.md).
+- FT8/FT4 decodificam e transmitem pelo app (ft8_lib, MIT). **A transmissão nunca foi testada com um rádio real**: teste primeiro numa carga fantasma, com o ALC sem acionar. O relógio do PC precisa estar sincronizado (NTP).
+- `ic7300/native/ft8.dll` é gerada por `python build_native.py` (precisa de `pip install ziglang`, só para desenvolver).
