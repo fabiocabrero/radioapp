@@ -23,6 +23,7 @@ from ..rigctl import RigctlServer
 from ..settings import Settings
 from ..spots import ClusterClient, Spot, fetch_pota
 from .maptab import MapTab
+from .swltab import SwlTab
 from .widgets import FrequencyDisplay, SpectrumView
 
 MODE_BUTTONS = ["LSB", "USB", "CW", "CW-R", "AM", "FM", "RTTY"]
@@ -181,6 +182,10 @@ class MainWindow(QtWidgets.QMainWindow):
         self.tabs.addTab(self._tab_cw(), "CW")
         self.map = MapTab(self.plan, self.cty)
         self.tabs.addTab(self.map, "Mapa / Propagação")
+        self.swl = SwlTab(self.plan)
+        self.tabs.addTab(self.swl, "Ondas curtas")
+        self.map.solar_updated.connect(self.swl.set_solar)
+        self.swl.tune_requested.connect(self._swl_tune)
         self.tabs.addTab(self._tab_ft(), "FT8 / FT4")
         self.tabs.addTab(self._tab_digital(), "Modos digitais")
         self.tabs.addTab(self._tab_bands(), "Plano de bandas")
@@ -471,6 +476,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.bridge.ft_msg.connect(lambda m: (self.lbl_ft.setText(m), self.statusBar().showMessage(m, 8000)))
         self._fill_digital()
         self.map.set_home(self.settings.lat, self.settings.lon, self.settings.callsign)
+        self.swl.set_home(self.settings.lat, self.settings.lon)
 
     # --------------------------------------------------------------- conexão
     def _refresh_ports(self) -> None:
@@ -651,6 +657,13 @@ class MainWindow(QtWidgets.QMainWindow):
         if auto_mode:
             mode, data = self.plan.suggest_mode(hz)
             self.radio.set_mode(mode, data, self.state.filter)
+
+    def _swl_tune(self, hz: int, mode: str) -> None:
+        if not self.radio:
+            self.bridge.message.emit("Conecte ao rádio (ou ao simulador) para sintonizar.")
+            return
+        self._tune(hz)
+        self.radio.set_mode(mode, False, self.state.filter)
 
     def _click_tune(self, hz: int) -> None:
         step = self.cb_step.currentData() or 100
@@ -921,6 +934,7 @@ class MainWindow(QtWidgets.QMainWindow):
         s.lat, s.lon = self.sp_lat.value(), self.sp_lon.value()
         s.save()
         self.map.set_home(s.lat, s.lon, s.callsign)
+        self.swl.set_home(s.lat, s.lon)
         self.lbl_grid.setText(f"{s.callsign}  {s.grid}")
         self.statusBar().showMessage("Local salvo.", 4000)
 
@@ -949,6 +963,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.sp_lon.setValue(lon)
         self.ed_mygrid.setText(geo.latlon_to_grid(lat, lon))
         self.map.set_home(lat, lon, self.settings.callsign)
+        self.swl.set_home(lat, lon)
         self.lbl_gps.setText(f"Posição do GPS: {lat:.5f}, {lon:.5f} ({self.ed_mygrid.text()})")
 
     # ---------------------------------------------------------------- misc

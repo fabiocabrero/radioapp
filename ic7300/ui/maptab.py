@@ -38,6 +38,7 @@ class MapTab(QtWidgets.QWidget):
     _solar_ready = QtCore.Signal(object)
     _psk_ready = QtCore.Signal(object, bool)
     _status = QtCore.Signal(str)
+    solar_updated = QtCore.Signal(object)
 
     def __init__(self, plan: BandPlan, cty: Cty) -> None:
         super().__init__()
@@ -282,6 +283,7 @@ class MapTab(QtWidgets.QWidget):
 
     def _on_solar(self, s: propagation.SolarData) -> None:
         self.solar = s
+        self.solar_updated.emit(s)
         self.lbl_solar.setText(f"SFI {s.sfi} · A {s.a_index} · K {s.k_index} · Manchas {s.sunspots}\n"
                                f"Raios-X {s.xray} · Vento solar {s.solar_wind:.0f} km/s · Geomag: {s.geomag}\n"
                                f"Atualizado: {s.updated}")

@@ -25,6 +25,7 @@ Marque **Simulador** para testar sem o rádio. Para o rádio real: no menu do IC
 - Decodificador de CW (tom automático, WPM adaptativo) e envio de CW pelo manipulador do rádio, macros F1-F8
 - DXCC (cty.dat): país, zonas, distância e azimute a partir do seu local
 - **Mapa e propagação**: mapa-múndi offline (Natural Earth) com dia/noite, seu QTH, spots, estações FT8 decodificadas e relatos do PSK Reporter (quem te ouve / quem você ouve) com rotas; clique no mapa para distância e azimute; índices solares (SFI, A, K, manchas) e condição por banda, dia e noite, em tempo real (N0NBH/HamQSL)
+- **Ondas curtas**: grade do EiBi baixada automaticamente (temporada vigente), com o que está no ar agora, horário local do PC e UTC, idioma, alvo, distância aproximada, potência e condição de propagação da faixa; filtros por banda, idioma, texto e região; duplo clique sintoniza em AM
 - Local: grid Maidenhead, lat/lon, GPS NMEA
 - Log com exportação ADIF, DX Cluster (telnet) e spots POTA
 

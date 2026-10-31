@@ -30,6 +30,9 @@ class SolarData:
     geomag: str = ""
     bands: dict = field(default_factory=dict)  # {("80m-40m", "day"): "Good", ...}
 
+    def condition_for_group(self, group: str, daytime: bool) -> str:
+        return self.bands.get((group, "day" if daytime else "night"), "")
+
     def condition_for(self, band: str, daytime: bool) -> str:
         for group, members in BAND_GROUPS.items():
             if band in members:
