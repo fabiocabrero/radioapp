@@ -23,6 +23,7 @@ from ..rigctl import RigctlServer
 from ..settings import Settings
 from ..spots import ClusterClient, Spot, fetch_pota
 from .conteststab import ContestsTab
+from .digitaltabs import JtTab, RttyTab
 from .maptab import MapTab
 from .potatab import PotaTab
 from .swltab import SwlTab
@@ -188,6 +189,10 @@ class MainWindow(QtWidgets.QMainWindow):
         self.tabs.addTab(self.pota, "POTA")
         self.pota.spot_chosen.connect(self._pota_chosen)
         self.pota.spots_loaded.connect(self._pota_to_map)
+        self.rtty = RttyTab(self.settings, lambda: self.state, self._ft_ptt, self._ft_play, lambda: self.ed_call.text().strip().upper())
+        self.tabs.addTab(self.rtty, "RTTY")
+        self.jt = JtTab(self.settings, self.cty, lambda: self.state)
+        self.tabs.addTab(self.jt, "FST4 / Q65 / WSPR")
         self.contests = ContestsTab(self.settings, self.cty, lambda: self.state, lambda: self.settings.callsign)
         self.tabs.addTab(self.contests, "Concursos")
         self.swl = SwlTab(self.plan)
@@ -598,6 +603,8 @@ class MainWindow(QtWidgets.QMainWindow):
             self.bridge.cw_text.emit(text)
         if self.radio:
             self.ft.feed(samples)
+            self.rtty.feed(samples)
+            self.jt.feed(samples)
         row = self.audio_spec.push(samples)
         now = time.time()
         if row is not None and now - self._last_audio_row > 0.08:

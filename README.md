@@ -29,6 +29,8 @@ Marque **Simulador** para testar sem o rádio. Para o rádio real: no menu do IC
 - **Concursos**: calendário do WA7BNM (no ar agora e próximos 7 dias, em hora local), log de concurso com número de série automático, checagem de duplicados por banda e modo, contagem de DXCC e zonas CQ, exportação **Cabrillo 3.0** (categorias e troca variam por concurso: confira as regras)
 - **POTA**: ativadores no ar com filtros por banda, modo e busca, distância e azimute, marca dos ainda não trabalhados; duplo clique sintoniza e preenche o log. O log aceita referências POTA, SOTA e WWFF (ADIF 3.1.4: POTA_REF, SOTA_REF, WWFF_REF e os MY_*), conta os QSOs da ativação (POTA valida com 10) e exporta o ADIF só da ativação
 - **SOTA**: apenas referências no log. Os spots do SOTA não estão integrados: os termos da API do SOTA exigem aprovação do projeto para software de terceiros
+- **RTTY** (nativo): recepção e transmissão em AFSK (45,45/50/75/100 baud, marca e shift ajustáveis, REV, UOS), validado por ida e volta com ruído
+- **FST4, Q65, JT65, JT9 e WSPR** (só recepção): usa o `jt9.exe` e o `wsprd.exe` do WSJT-X instalado no PC, em slots alinhados ao relógio UTC. FST4 e Q65 foram validados com os simuladores do WSJT-X; JT65, JT9 e WSPR (marcados com *) usam o mesmo caminho, mas não foram validados com sinais reais
 - Local: grid Maidenhead, lat/lon, GPS NMEA
 - Log com exportação ADIF, DX Cluster (telnet) e spots POTA
 

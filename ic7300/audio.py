@@ -50,6 +50,12 @@ def play_blocking(samples: np.ndarray, device: str) -> None:
     sd.wait()
 
 
+def stop_playback() -> None:
+    import sounddevice as sd
+
+    sd.stop()
+
+
 def find_radio_input() -> str:
     """Procura o codec USB do IC-7300 (aparece como 'USB Audio CODEC')."""
     return next((n for n in list_input_devices() if "USB Audio CODEC" in n), "")

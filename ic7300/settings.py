@@ -36,6 +36,7 @@ class Settings:
     rigctl_enabled: bool = False
     rigctl_port: int = 4532
     my_ref: str = ""
+    wsjtx_dir: str = ""
     contest_name: str = ""
     cabrillo: dict = field(default_factory=dict)
 
