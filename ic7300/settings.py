@@ -33,6 +33,8 @@ class Settings:
         "?", "QRZ? DE {call}", "TU 73 EE", "{call}", "AGN?"])
     last_freq_by_band: dict = field(default_factory=dict)
     simulator: bool = True
+    rigctl_enabled: bool = False
+    rigctl_port: int = 4532
 
     @classmethod
     def load(cls) -> "Settings":

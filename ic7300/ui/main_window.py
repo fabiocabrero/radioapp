@@ -19,6 +19,7 @@ from ..dsp.spectrum import AudioSpectrum
 from ..dxcc import Cty
 from ..logbook import Logbook, Qso
 from ..radio import Radio, RadioState, SerialTransport, SimTransport, list_serial_ports, power_watts, s_meter_text, swr_value
+from ..rigctl import RigctlServer
 from ..settings import Settings
 from ..spots import ClusterClient, Spot, fetch_pota
 from .widgets import FrequencyDisplay, SpectrumView
@@ -55,6 +56,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.audio: Optional[audio_mod.AudioSource] = None
         self.cluster: Optional[ClusterClient] = None
         self.gps: Optional[geo.GpsReader] = None
+        self.rigctl: Optional[RigctlServer] = None
         self.state = RadioState()
         self.cw = CwDecoder()
         self.ft = FtEngine(self.bridge.ft_rx.emit, self.bridge.ft_msg.emit, self._ft_ptt, self._ft_play)
@@ -97,7 +99,11 @@ class MainWindow(QtWidgets.QMainWindow):
             if label:
                 conn.addWidget(QtWidgets.QLabel(label))
             conn.addWidget(w)
+        self.chk_rigctl = QtWidgets.QCheckBox(f"Servidor rigctl (porta {self.settings.rigctl_port})")
+        self.chk_rigctl.setToolTip("Permite que WSJT-X, JS8Call, Fldigi etc. usem este app como rádio (Hamlib NET rigctl, 127.0.0.1)")
+        self.chk_rigctl.setChecked(self.settings.rigctl_enabled)
         conn.addWidget(self.chk_sim)
+        conn.addWidget(self.chk_rigctl)
         conn.addStretch()
         self.lbl_status = QtWidgets.QLabel("● Desconectado")
         conn.addWidget(self.lbl_status)
@@ -439,6 +445,9 @@ class MainWindow(QtWidgets.QMainWindow):
     # ---------------------------------------------------------------- wiring
     def _wire(self) -> None:
         self.btn_connect.clicked.connect(self._toggle_connect)
+        self.chk_rigctl.toggled.connect(self._toggle_rigctl)
+        if self.chk_rigctl.isChecked():
+            QtCore.QTimer.singleShot(0, lambda: self._toggle_rigctl(True))
         self.btn_refresh.clicked.connect(self._refresh_ports)
         self.freq_disp.tuned.connect(self._tune)
         self.spectrum.clicked_freq.connect(self._click_tune)
@@ -504,6 +513,24 @@ class MainWindow(QtWidgets.QMainWindow):
         self.radio.set_scope(True, civ.SCOPE_SPANS_HZ[self.cb_span.currentIndex()])
         self._start_audio()
         self.btn_connect.setText("Desconectar")
+
+    def _toggle_rigctl(self, on: bool) -> None:
+        if self.rigctl:
+            self.rigctl.stop()
+            self.rigctl = None
+        if on:
+            try:
+                self.rigctl = RigctlServer(lambda: self.radio, lambda: self.state, port=self.settings.rigctl_port,
+                                           on_message=self.bridge.message.emit)
+                self.rigctl.start()
+            except OSError as exc:
+                QtWidgets.QMessageBox.warning(self, "rigctl", f"Não foi possível abrir a porta {self.settings.rigctl_port}: {exc}")
+                self.rigctl = None
+                self.chk_rigctl.blockSignals(True)
+                self.chk_rigctl.setChecked(False)
+                self.chk_rigctl.blockSignals(False)
+                on = False
+        self.settings.rigctl_enabled = on
 
     def _disconnect(self) -> None:
         if self.audio:
@@ -930,5 +957,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.cluster.stop()
         if self.gps:
             self.gps.stop()
+        if self.rigctl:
+            self.rigctl.stop()
         self.settings.save()
         super().closeEvent(e)

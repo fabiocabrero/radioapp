@@ -27,6 +27,15 @@ Marque **Simulador** para testar sem o rádio. Para o rádio real: no menu do IC
 - Local: grid Maidenhead, lat/lon, GPS NMEA
 - Log com exportação ADIF, DX Cluster (telnet) e spots POTA
 
+## Usar com WSJT-X / JS8Call / Fldigi (servidor rigctl)
+
+Marque **Servidor rigctl** no app (porta 4532, só em 127.0.0.1) e conecte ao rádio. No WSJT-X, em
+*Settings > Radio*: Rig = `Hamlib NET rigctl`, Network Server = `127.0.0.1:4532`, PTT Method = `CAT`,
+Mode = `Data/Pkt`. Em *Audio*, escolha o `USB Audio CODEC`. Assim só o app abre a porta serial do rádio
+e os outros programas controlam o rádio por ele. Use um único programa por vez para transmitir (o FT8 do
+próprio app ou o WSJT-X), nunca os dois ao mesmo tempo.
+Testado com o cliente Hamlib 4 que acompanha o WSJT-X (frequência, modo, PTT, nível S) contra o simulador.
+
 ## Estado e limites
 
 - Testado com o simulador incluído e testes automáticos (`pytest`). **Ainda não foi testado com um IC-7300 real.**
