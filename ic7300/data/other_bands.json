@@ -1,0 +1,98 @@
+[
+ {
+  "name": "Broadcast 75m",
+  "start": 3900000,
+  "stop": 4000000,
+  "kind": "broadcast"
+ },
+ {
+  "name": "Broadcast 60m",
+  "start": 4750000,
+  "stop": 5060000,
+  "kind": "broadcast"
+ },
+ {
+  "name": "Broadcast 49m",
+  "start": 5850000,
+  "stop": 6350000,
+  "kind": "broadcast"
+ },
+ {
+  "name": "Broadcast 41m",
+  "start": 7200000,
+  "stop": 7500000,
+  "kind": "broadcast"
+ },
+ {
+  "name": "Broadcast 31m",
+  "start": 9400000,
+  "stop": 9990000,
+  "kind": "broadcast"
+ },
+ {
+  "name": "Broadcast 25m",
+  "start": 11600000,
+  "stop": 12100000,
+  "kind": "broadcast"
+ },
+ {
+  "name": "Broadcast 22m",
+  "start": 13500000,
+  "stop": 13870000,
+  "kind": "broadcast"
+ },
+ {
+  "name": "Broadcast 19m",
+  "start": 15100000,
+  "stop": 15600000,
+  "kind": "broadcast"
+ },
+ {
+  "name": "Broadcast 16m",
+  "start": 17550000,
+  "stop": 18050000,
+  "kind": "broadcast"
+ },
+ {
+  "name": "Broadcast 15m",
+  "start": 18900000,
+  "stop": 19020000,
+  "kind": "broadcast"
+ },
+ {
+  "name": "Broadcast 13m",
+  "start": 21450000,
+  "stop": 21850000,
+  "kind": "broadcast"
+ },
+ {
+  "name": "Broadcast 11m",
+  "start": 25600000,
+  "stop": 26055000,
+  "kind": "broadcast"
+ },
+ {
+  "name": "CB A",
+  "start": 26055000,
+  "stop": 26295000,
+  "kind": "cb"
+ },
+ {
+  "name": "CB B",
+  "start": 26515000,
+  "stop": 26745000,
+  "kind": "cb"
+ },
+ {
+  "name": "CB C",
+  "start": 26965000,
+  "stop": 27195000,
+  "kind": "cb"
+ },
+ {
+  "name": "CB D",
+  "start": 27415000,
+  "stop": 27645000,
+  "kind": "cb"
+ }
+]

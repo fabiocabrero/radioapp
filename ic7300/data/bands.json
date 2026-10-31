@@ -1,0 +1,252 @@
+{
+ "_nota": "Plano de bandas de radioamador (base IARU Região 2, usada no Brasil). Valores em Hz. Confira os limites e as classes de licença na regulamentação vigente da Anatel antes de transmitir. Edite este arquivo para ajustar. O IC-7300 cobre 0,03 a 74,8 MHz, por isso 2 m e 70 cm não estão incluídos.",
+ "bands": [
+  {
+   "name": "160m",
+   "start": 1800000,
+   "stop": 2000000,
+   "segments": [
+    {
+     "start": 1800000,
+     "stop": 1840000,
+     "use": "CW"
+    },
+    {
+     "start": 1840000,
+     "stop": 1850000,
+     "use": "DIG"
+    },
+    {
+     "start": 1850000,
+     "stop": 2000000,
+     "use": "SSB"
+    }
+   ]
+  },
+  {
+   "name": "80m",
+   "start": 3500000,
+   "stop": 3800000,
+   "segments": [
+    {
+     "start": 3500000,
+     "stop": 3570000,
+     "use": "CW"
+    },
+    {
+     "start": 3570000,
+     "stop": 3600000,
+     "use": "DIG"
+    },
+    {
+     "start": 3600000,
+     "stop": 3800000,
+     "use": "SSB"
+    }
+   ]
+  },
+  {
+   "name": "60m",
+   "start": 5351500,
+   "stop": 5366500,
+   "segments": [
+    {
+     "start": 5351500,
+     "stop": 5366500,
+     "use": "ALL"
+    }
+   ]
+  },
+  {
+   "name": "40m",
+   "start": 7000000,
+   "stop": 7300000,
+   "segments": [
+    {
+     "start": 7000000,
+     "stop": 7040000,
+     "use": "CW"
+    },
+    {
+     "start": 7040000,
+     "stop": 7080000,
+     "use": "DIG"
+    },
+    {
+     "start": 7080000,
+     "stop": 7300000,
+     "use": "SSB"
+    }
+   ]
+  },
+  {
+   "name": "30m",
+   "start": 10100000,
+   "stop": 10150000,
+   "segments": [
+    {
+     "start": 10100000,
+     "stop": 10130000,
+     "use": "CW"
+    },
+    {
+     "start": 10130000,
+     "stop": 10150000,
+     "use": "DIG"
+    }
+   ]
+  },
+  {
+   "name": "20m",
+   "start": 14000000,
+   "stop": 14350000,
+   "segments": [
+    {
+     "start": 14000000,
+     "stop": 14070000,
+     "use": "CW"
+    },
+    {
+     "start": 14070000,
+     "stop": 14100000,
+     "use": "DIG"
+    },
+    {
+     "start": 14100000,
+     "stop": 14101000,
+     "use": "BCN"
+    },
+    {
+     "start": 14101000,
+     "stop": 14350000,
+     "use": "SSB"
+    }
+   ]
+  },
+  {
+   "name": "17m",
+   "start": 18068000,
+   "stop": 18168000,
+   "segments": [
+    {
+     "start": 18068000,
+     "stop": 18095000,
+     "use": "CW"
+    },
+    {
+     "start": 18095000,
+     "stop": 18110000,
+     "use": "DIG"
+    },
+    {
+     "start": 18110000,
+     "stop": 18168000,
+     "use": "SSB"
+    }
+   ]
+  },
+  {
+   "name": "15m",
+   "start": 21000000,
+   "stop": 21450000,
+   "segments": [
+    {
+     "start": 21000000,
+     "stop": 21070000,
+     "use": "CW"
+    },
+    {
+     "start": 21070000,
+     "stop": 21150000,
+     "use": "DIG"
+    },
+    {
+     "start": 21150000,
+     "stop": 21450000,
+     "use": "SSB"
+    }
+   ]
+  },
+  {
+   "name": "12m",
+   "start": 24890000,
+   "stop": 24990000,
+   "segments": [
+    {
+     "start": 24890000,
+     "stop": 24915000,
+     "use": "CW"
+    },
+    {
+     "start": 24915000,
+     "stop": 24930000,
+     "use": "DIG"
+    },
+    {
+     "start": 24930000,
+     "stop": 24990000,
+     "use": "SSB"
+    }
+   ]
+  },
+  {
+   "name": "10m",
+   "start": 28000000,
+   "stop": 29700000,
+   "segments": [
+    {
+     "start": 28000000,
+     "stop": 28070000,
+     "use": "CW"
+    },
+    {
+     "start": 28070000,
+     "stop": 28190000,
+     "use": "DIG"
+    },
+    {
+     "start": 28190000,
+     "stop": 28225000,
+     "use": "BCN"
+    },
+    {
+     "start": 28225000,
+     "stop": 29000000,
+     "use": "SSB"
+    },
+    {
+     "start": 29000000,
+     "stop": 29700000,
+     "use": "FM"
+    }
+   ]
+  },
+  {
+   "name": "6m",
+   "start": 50000000,
+   "stop": 54000000,
+   "segments": [
+    {
+     "start": 50000000,
+     "stop": 50100000,
+     "use": "CW"
+    },
+    {
+     "start": 50100000,
+     "stop": 50300000,
+     "use": "SSB"
+    },
+    {
+     "start": 50300000,
+     "stop": 50400000,
+     "use": "DIG"
+    },
+    {
+     "start": 50400000,
+     "stop": 54000000,
+     "use": "ALL"
+    }
+   ]
+  }
+ ]
+}

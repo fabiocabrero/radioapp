@@ -1,0 +1,277 @@
+[
+ {
+  "label": "FT8 160m",
+  "freq": 1840000,
+  "type": "FT8"
+ },
+ {
+  "label": "FT8 80m",
+  "freq": 3573000,
+  "type": "FT8"
+ },
+ {
+  "label": "FT8 60m",
+  "freq": 5357000,
+  "type": "FT8"
+ },
+ {
+  "label": "FT8 40m",
+  "freq": 7074000,
+  "type": "FT8"
+ },
+ {
+  "label": "FT8 30m",
+  "freq": 10136000,
+  "type": "FT8"
+ },
+ {
+  "label": "FT8 20m",
+  "freq": 14074000,
+  "type": "FT8"
+ },
+ {
+  "label": "FT8 17m",
+  "freq": 18100000,
+  "type": "FT8"
+ },
+ {
+  "label": "FT8 15m",
+  "freq": 21074000,
+  "type": "FT8"
+ },
+ {
+  "label": "FT8 12m",
+  "freq": 24915000,
+  "type": "FT8"
+ },
+ {
+  "label": "FT8 10m",
+  "freq": 28074000,
+  "type": "FT8"
+ },
+ {
+  "label": "FT8 6m",
+  "freq": 50313000,
+  "type": "FT8"
+ },
+ {
+  "label": "FT4 80m",
+  "freq": 3575000,
+  "type": "FT4"
+ },
+ {
+  "label": "FT4 40m",
+  "freq": 7047500,
+  "type": "FT4"
+ },
+ {
+  "label": "FT4 30m",
+  "freq": 10140000,
+  "type": "FT4"
+ },
+ {
+  "label": "FT4 20m",
+  "freq": 14080000,
+  "type": "FT4"
+ },
+ {
+  "label": "FT4 17m",
+  "freq": 18104000,
+  "type": "FT4"
+ },
+ {
+  "label": "FT4 15m",
+  "freq": 21140000,
+  "type": "FT4"
+ },
+ {
+  "label": "FT4 12m",
+  "freq": 24919000,
+  "type": "FT4"
+ },
+ {
+  "label": "FT4 10m",
+  "freq": 28180000,
+  "type": "FT4"
+ },
+ {
+  "label": "FT4 6m",
+  "freq": 50318000,
+  "type": "FT4"
+ },
+ {
+  "label": "JS8 160m",
+  "freq": 1842000,
+  "type": "JS8"
+ },
+ {
+  "label": "JS8 80m",
+  "freq": 3578000,
+  "type": "JS8"
+ },
+ {
+  "label": "JS8 40m",
+  "freq": 7078000,
+  "type": "JS8"
+ },
+ {
+  "label": "JS8 30m",
+  "freq": 10130000,
+  "type": "JS8"
+ },
+ {
+  "label": "JS8 20m",
+  "freq": 14078000,
+  "type": "JS8"
+ },
+ {
+  "label": "JS8 17m",
+  "freq": 18104000,
+  "type": "JS8"
+ },
+ {
+  "label": "JS8 15m",
+  "freq": 21078000,
+  "type": "JS8"
+ },
+ {
+  "label": "JS8 12m",
+  "freq": 24922000,
+  "type": "JS8"
+ },
+ {
+  "label": "JS8 10m",
+  "freq": 28078000,
+  "type": "JS8"
+ },
+ {
+  "label": "JS8 6m",
+  "freq": 50318000,
+  "type": "JS8"
+ },
+ {
+  "label": "GhostNet 80m",
+  "freq": 3575000,
+  "type": "GhostNet"
+ },
+ {
+  "label": "GhostNet 40m",
+  "freq": 7107000,
+  "type": "GhostNet"
+ },
+ {
+  "label": "GhostNet 20m",
+  "freq": 14107000,
+  "type": "GhostNet"
+ },
+ {
+  "label": "WSPR 160m",
+  "freq": 1836600,
+  "type": "WSPR"
+ },
+ {
+  "label": "WSPR 80m",
+  "freq": 3568600,
+  "type": "WSPR"
+ },
+ {
+  "label": "WSPR 60m",
+  "freq": 5287200,
+  "type": "WSPR"
+ },
+ {
+  "label": "WSPR 40m",
+  "freq": 7038600,
+  "type": "WSPR"
+ },
+ {
+  "label": "WSPR 30m",
+  "freq": 10138700,
+  "type": "WSPR"
+ },
+ {
+  "label": "WSPR 20m",
+  "freq": 14095600,
+  "type": "WSPR"
+ },
+ {
+  "label": "WSPR 17m",
+  "freq": 18104600,
+  "type": "WSPR"
+ },
+ {
+  "label": "WSPR 15m",
+  "freq": 21094600,
+  "type": "WSPR"
+ },
+ {
+  "label": "WSPR 12m",
+  "freq": 24924600,
+  "type": "WSPR"
+ },
+ {
+  "label": "WSPR 10m",
+  "freq": 28124600,
+  "type": "WSPR"
+ },
+ {
+  "label": "WSPR 6m",
+  "freq": 50293000,
+  "type": "WSPR"
+ },
+ {
+  "label": "FT2 160m",
+  "freq": 1843000,
+  "type": "FT2"
+ },
+ {
+  "label": "FT2 80m",
+  "freq": 3568000,
+  "type": "FT2"
+ },
+ {
+  "label": "FT2 60m",
+  "freq": 5360000,
+  "type": "FT2"
+ },
+ {
+  "label": "FT2 40m",
+  "freq": 7062000,
+  "type": "FT2"
+ },
+ {
+  "label": "FT2 30m",
+  "freq": 10144000,
+  "type": "FT2"
+ },
+ {
+  "label": "FT2 20m",
+  "freq": 14084000,
+  "type": "FT2"
+ },
+ {
+  "label": "FT2 17m",
+  "freq": 18108000,
+  "type": "FT2"
+ },
+ {
+  "label": "FT2 15m",
+  "freq": 21144000,
+  "type": "FT2"
+ },
+ {
+  "label": "FT2 12m",
+  "freq": 24923000,
+  "type": "FT2"
+ },
+ {
+  "label": "FT2 10m",
+  "freq": 28184000,
+  "type": "FT2"
+ },
+ {
+  "label": "FT2 6m",
+  "freq": 50316000,
+  "type": "FT2"
+ }
+]
