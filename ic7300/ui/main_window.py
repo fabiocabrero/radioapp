@@ -381,7 +381,7 @@ class MainWindow(QtWidgets.QMainWindow):
         return w
 
     def _fill_bands(self) -> None:
-        cls = self.settings.license_class
+        cls = self._cls()
         self.tbl_bands.setRowCount(0)
         for seg in self.plan.segments:
             r = self.tbl_bands.rowCount()
@@ -397,17 +397,45 @@ class MainWindow(QtWidgets.QMainWindow):
         power = ""
         if cls and self.plan.max_power(cls):
             power = f" · potência máxima da classe {cls}: {self.plan.max_power(cls)} W"
-        self.lbl_plan.setText(f"Plano ativo: {self.plan.name}" + (f" · sua classe: {cls}" if cls else " · informe sua classe em Local / GPS") + power)
-        self.lbl_plan_src.setText(self.plan.info.get("source", "") + " " + self.plan.info.get("power_note", "") +
+        label = self.plan.classes.get(cls, cls)
+        self.lbl_plan.setText(f"Plano ativo: {self.plan.name}" + (f" · sua classe: {label}" if cls else (" · informe sua classe em Local / GPS" if self.plan.classes else "")) + power)
+        legend = ("Classes: " + "; ".join(f"{c} = {n}" for c, n in self.plan.classes.items()) + ". ") if self.plan.classes else ""
+        self.lbl_plan_src.setText(legend + self.plan.info.get("source", "") + " " + self.plan.info.get("power_note", "") +
                                   " Linhas em cinza: fora dos privilégios da sua classe. O app avisa, mas não impede, e não substitui a regulamentação.")
 
-    def _resolve_plan(self) -> str:
-        if self.settings.band_plan and self.settings.band_plan != "auto" and self.settings.band_plan in self.plan.plans:
-            return self.settings.band_plan
-        return choose_plan(self.settings.callsign, self.settings.lat, self.settings.lon, self.cty)
+    def _resolve_plan(self, band_plan: str | None = None, callsign: str | None = None) -> str:
+        chosen = self.settings.band_plan if band_plan is None else band_plan
+        if chosen and chosen != "auto" and chosen in self.plan.plans:
+            return chosen
+        call = self.settings.callsign if callsign is None else callsign
+        return choose_plan(call, self.settings.lat, self.settings.lon, self.cty, set(self.plan.plans))
+
+    def _cls(self) -> str:
+        """Classe de licença informada para o plano ativo."""
+        return self.settings.classes_by_plan.get(self.plan.plan_id, "")
+
+    def _preview_plan(self) -> str:
+        """Plano que valerá com os campos de Local / GPS como estão agora (antes de salvar)."""
+        return self._resolve_plan(self.cb_plan.currentData(), self.ed_mycall.text().strip().upper())
+
+    def _fill_class_combo(self, plan_id: str) -> None:
+        classes = self.plan.plans[plan_id].get("classes") or {}
+        current = self.settings.classes_by_plan.get(plan_id, "")
+        self.cb_class.blockSignals(True)
+        self.cb_class.clear()
+        self.cb_class.addItem("Não informar" if classes else "(este plano não tem classes)", "")
+        for code, label in classes.items():
+            self.cb_class.addItem(label, code)
+        self.cb_class.setCurrentIndex(max(0, self.cb_class.findData(current)))
+        self.cb_class.setEnabled(bool(classes))
+        self.cb_class.blockSignals(False)
+
+    def _preview_class_combo(self) -> None:
+        self._fill_class_combo(self._preview_plan())
 
     def _apply_plan(self) -> None:
         self.plan.select(self._resolve_plan())
+        self._fill_class_combo(self.plan.plan_id)
         self._rebuild_band_buttons()
         self._fill_bands()
         self.spectrum._range_drawn = None
@@ -433,7 +461,7 @@ class MainWindow(QtWidgets.QMainWindow):
         """Avisa quando a transmissão agora não é compatível com o plano, a classe e a emissão; o operador decide."""
         st = self.state
         cat = category or self.plan.category(st.mode, st.data_mode)
-        status = self.plan.tx_status(st.freq, self.settings.license_class, cat)
+        status = self.plan.tx_status(st.freq, self._cls(), cat)
         if status.ok:
             return True
         answer = QtWidgets.QMessageBox.warning(
@@ -444,7 +472,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def _ft_allowed(self) -> bool:  # thread de áudio: sem diálogo
         st = self.state
-        ok = self.plan.tx_status(st.freq, self.settings.license_class, "DIG").ok
+        ok = self.plan.tx_status(st.freq, self._cls(), "DIG").ok
         if not ok:
             self.bridge.ft_stop.emit()
         return ok
@@ -516,6 +544,7 @@ class MainWindow(QtWidgets.QMainWindow):
         w = QtWidgets.QWidget()
         form = QtWidgets.QFormLayout(w)
         self.ed_mycall = QtWidgets.QLineEdit(self.settings.callsign)
+        self.ed_mycall.editingFinished.connect(lambda: self._fill_class_combo(self._preview_plan()))
         self.ed_mygrid = QtWidgets.QLineEdit(self.settings.grid)
         self.sp_lat = QtWidgets.QDoubleSpinBox()
         self.sp_lat.setRange(-90, 90)
@@ -541,9 +570,8 @@ class MainWindow(QtWidgets.QMainWindow):
             self.cb_plan.addItem(pname, pid)
         self.cb_plan.setCurrentIndex(max(0, self.cb_plan.findData(self.settings.band_plan)))
         self.cb_class = QtWidgets.QComboBox()
-        for label, value in (("Não informar", ""), ("Classe A", "A"), ("Classe B", "B"), ("Classe C", "C")):
-            self.cb_class.addItem(label, value)
-        self.cb_class.setCurrentIndex(max(0, self.cb_class.findData(self.settings.license_class)))
+        self._fill_class_combo(self.plan.plan_id)
+        self.cb_plan.currentIndexChanged.connect(self._preview_class_combo)
         form.addRow("Plano de bandas", self.cb_plan)
         form.addRow("Classe da licença", self.cb_class)
         row = QtWidgets.QHBoxLayout()
@@ -741,7 +769,7 @@ class MainWindow(QtWidgets.QMainWindow):
             b.setStyleSheet("background:#2e7d32" if n == band else "")
         if seg:
             extra = f" · classes {'/'.join(seg.classes)}" if seg.classes else ""
-            status = self.plan.tx_status(st.freq, self.settings.license_class, self.plan.category(st.mode, st.data_mode))
+            status = self.plan.tx_status(st.freq, self._cls(), self.plan.category(st.mode, st.data_mode))
             self.lbl_seg.setText(f"{seg.band} · {USE_LABELS.get(seg.use, seg.use)}{extra}")
             self.lbl_band_now.setText(f"Frequência atual: {st.freq / 1e3:.2f} kHz — {seg.band}, {USE_LABELS.get(seg.use, seg.use)}{extra}"
                                       + ("" if status.ok else f"\nAtenção: {status.text}"))
@@ -1123,7 +1151,8 @@ class MainWindow(QtWidgets.QMainWindow):
         s.callsign = self.ed_mycall.text().strip().upper()
         s.grid = self.ed_mygrid.text().strip()
         s.lat, s.lon = self.sp_lat.value(), self.sp_lon.value()
-        s.band_plan, s.license_class = self.cb_plan.currentData(), self.cb_class.currentData()
+        s.band_plan = self.cb_plan.currentData()
+        s.classes_by_plan[self._preview_plan()] = self.cb_class.currentData() or ""
         s.save()
         self._apply_plan()
         self.map.set_home(s.lat, s.lon, s.callsign)

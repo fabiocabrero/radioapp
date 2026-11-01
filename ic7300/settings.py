@@ -39,7 +39,8 @@ class Settings:
     my_ref: str = ""
     wsjtx_dir: str = ""
     band_plan: str = "auto"
-    license_class: str = ""
+    license_class: str = ""  # legado: classe do plano brasileiro (migrada para classes_by_plan)
+    classes_by_plan: dict = field(default_factory=dict)
     contest_name: str = ""
     cabrillo: dict = field(default_factory=dict)
 
@@ -48,7 +49,10 @@ class Settings:
         path = app_dir() / "settings.json"
         try:
             raw = json.loads(path.read_text(encoding="utf-8"))
-            return cls(**{k: v for k, v in raw.items() if k in cls.__dataclass_fields__})
+            st = cls(**{k: v for k, v in raw.items() if k in cls.__dataclass_fields__})
+            if st.license_class and "BR" not in st.classes_by_plan:  # migra a classe salva antes dos planos por país
+                st.classes_by_plan["BR"] = st.license_class
+            return st
         except (OSError, ValueError, TypeError):
             return cls()
 

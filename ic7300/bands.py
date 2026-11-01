@@ -34,6 +34,7 @@ class Segment:
     modes: list[str] = field(default_factory=list)  # modos liberados (vazio = plano genérico, sem detalhe)
     classes: str = ""                               # classes que podem usar, ex.: "AB" (vazio = não especificado)
     note: str = ""
+    class_modes: dict[str, list[str]] = field(default_factory=dict)  # modos liberados quando diferem para uma classe
 
 
 @dataclass
@@ -55,11 +56,20 @@ def iaru_region(entity_name: str, continent: str) -> int:
     return {"EU": 1, "AF": 1, "NA": 2, "SA": 2, "AS": 3, "OC": 3}.get(continent, 2)
 
 
-def choose_plan(callsign: str, lat: float, lon: float, cty=None) -> str:
-    """Escolhe o plano pelo indicativo (entidade DXCC) ou, sem indicativo, pela posição."""
+# Entidades DXCC (cty.dat) que têm plano próprio
+ENTITY_PLAN = {"Brazil": "BR", "United States": "US", "Alaska": "US", "Hawaii": "US", "Puerto Rico": "US",
+               "US Virgin Islands": "US", "Canada": "CA"}
+# Caixas aproximadas (lat_min, lat_max, lon_min, lon_max) para quando só há a posição
+PLAN_BOXES = [("BR", -33.8, 5.3, -73.9, -34.8), ("US", 24.4, 49.0, -125.0, -66.9), ("CA", 49.0, 83.0, -141.0, -52.0)]
+
+
+def choose_plan(callsign: str, lat: float, lon: float, cty=None, available=None) -> str:
+    """Escolhe o plano pelo indicativo (entidade DXCC) ou, sem indicativo, pela posição (aproximada)."""
     ent = cty.lookup(callsign) if (cty and callsign) else None
-    if ent is None and (lat or lon) and -33.8 <= lat <= 5.3 and -73.9 <= lon <= -34.8:
-        return "BR"  # caixa aproximada do Brasil; o indicativo é mais confiável, e há seleção manual
+    if ent is None and (lat or lon):
+        for pid, la0, la1, lo0, lo1 in PLAN_BOXES:
+            if la0 <= lat <= la1 and lo0 <= lon <= lo1 and (available is None or pid in available):
+                return pid
     if ent is None and cty is not None and (lat or lon):
         from . import geo
 
@@ -67,8 +77,9 @@ def choose_plan(callsign: str, lat: float, lon: float, cty=None) -> str:
         ent = min(entities, key=lambda e: geo.distance_bearing(lat, lon, e.lat, e.lon)[0])
     if ent is None:
         return "IARU-R2"
-    if ent.name == "Brazil":
-        return "BR"
+    own = ENTITY_PLAN.get(ent.name)
+    if own and (available is None or own in available):
+        return own
     return f"IARU-R{iaru_region(ent.name, ent.continent)}"
 
 
@@ -98,7 +109,7 @@ class BandPlan:
         self.info = spec
         self.bands = spec["bands"]
         self.segments = [Segment(b["name"], s["start"], s["stop"], s["use"], list(s.get("modes", [])), s.get("classes", ""),
-                                 s.get("note", "")) for b in self.bands for s in b["segments"]]
+                                 s.get("note", ""), dict(s.get("class_modes", {}))) for b in self.bands for s in b["segments"]]
 
     @property
     def name(self) -> str:
@@ -107,6 +118,11 @@ class BandPlan:
     @property
     def generic(self) -> bool:
         return bool(self.info.get("generic"))
+
+    @property
+    def classes(self) -> dict[str, str]:
+        """Classes de licença do plano: {código: nome}. Vazio nos planos genéricos."""
+        return dict(self.info.get("classes") or {})
 
     def max_power(self, license_class: str) -> Optional[int]:
         return (self.info.get("max_power") or {}).get(license_class)
@@ -173,11 +189,13 @@ class BandPlan:
         if seg.use == "REP":
             return TxStatus("repeater", f"{seg.band}: segmento exclusivo de repetidoras ({seg.start / 1e3:g}–{seg.stop / 1e3:g} kHz).")
         if license_class and seg.classes and license_class not in seg.classes:
-            allowed = "/".join(seg.classes)
-            return TxStatus("class", f"{seg.band} em {seg.start / 1e3:g}–{seg.stop / 1e3:g} kHz é liberada só para a classe {allowed}; "
-                                     f"sua licença é classe {license_class}.")
-        if category and seg.modes and category not in seg.modes:
-            have = ", ".join(MODE_LABELS.get(m, m) for m in seg.modes)
+            names = self.classes
+            allowed = "/".join(names.get(c, c) for c in seg.classes)
+            return TxStatus("class", f"{seg.band} em {seg.start / 1e3:g}–{seg.stop / 1e3:g} kHz é liberada só para: {allowed}; "
+                                     f"sua licença: {names.get(license_class, license_class)}.")
+        modes = seg.class_modes.get(license_class, seg.modes) if license_class else seg.modes
+        if category and modes and category not in modes:
+            have = ", ".join(MODE_LABELS.get(m, m) for m in modes)
             return TxStatus("mode", f"{MODE_LABELS.get(category, category)} não consta como liberado em {seg.start / 1e3:g}–"
                                     f"{seg.stop / 1e3:g} kHz (liberados: {have}).")
         return TxStatus("ok", "")

@@ -93,7 +93,7 @@ def test_wsjtx_style_session(rig):
     assert c.ask("s", 2) == ["0", "VFOA"]
     assert c.ask("f VFOA") == ["14074000"]
     assert c.ask("l STRENGTH")[0].lstrip("-").isdigit()
-    assert c.ask("\get_lock_mode", 2) == ["0", "RPRT 0"]  # o cliente Hamlib lê duas linhas
+    assert c.ask(r"\get_lock_mode", 2) == ["0", "RPRT 0"]  # o cliente Hamlib lê duas linhas
     assert c.ask("xyz") == ["RPRT -4"]
 
 

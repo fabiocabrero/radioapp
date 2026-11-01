@@ -22,14 +22,18 @@ def br(tmp_path):
 def test_plan_selection_by_callsign_and_position(cty):
     assert choose_plan("PY2XX", 0, 0, cty) == "BR"
     assert choose_plan("PU2ABC", 0, 0, cty) == "BR"
-    assert choose_plan("W1AW", 0, 0, cty) == "IARU-R2"
+    assert choose_plan("W1AW", 0, 0, cty) == "US"
+    assert choose_plan("KH6ABC", 0, 0, cty) == "US"          # Havaí: regras da FCC
+    assert choose_plan("VE3ABC", 0, 0, cty) == "CA"
+    assert choose_plan("XE1ABC", 0, 0, cty) == "IARU-R2"      # México: sem plano próprio, cai na Região 2
     assert choose_plan("G3ABC", 0, 0, cty) == "IARU-R1"
     assert choose_plan("JA1ABC", 0, 0, cty) == "IARU-R3"
     assert choose_plan("ZS6XYZ", 0, 0, cty) == "IARU-R1"
     assert choose_plan("UA9XYZ", 0, 0, cty) == "IARU-R1"      # Rússia asiática é Região 1
-    assert choose_plan("KH6ABC", 0, 0, cty) == "IARU-R2"      # Havaí é Região 2
     assert choose_plan("", -23.26, -47.30, cty) == "BR"       # sem indicativo, pela posição (Itu)
     assert choose_plan("", 51.5, -0.1, cty) == "IARU-R1"      # Londres
+    assert choose_plan("", 40.0, -100.0, cty) == "US" and choose_plan("", 60.0, -100.0, cty) == "CA"
+    assert choose_plan("W1AW", 0, 0, cty, available={"BR"}) == "IARU-R2"   # sem o plano US instalado, volta à região
     assert choose_plan("", 0, 0, None) == "IARU-R2"
     assert iaru_region("Japan", "AS") == 3
 
@@ -99,3 +103,72 @@ def test_custom_plan_file_adds_and_overrides_plans(tmp_path):
     assert plan.name == "País de teste" and plan.band_names() == ["20m"]
     assert ("BR", "Brasil (Anatel, Ato 926/2024)") in plan.available()
     assert BandPlan("naoexiste", custom_path=custom).plan_id == "IARU-R2"
+
+
+@pytest.fixture()
+def us(tmp_path):
+    return BandPlan("US", custom_path=tmp_path / "x.json")
+
+
+@pytest.fixture()
+def ca(tmp_path):
+    return BandPlan("CA", custom_path=tmp_path / "x.json")
+
+
+def test_class_labels_per_plan(br, us, ca, tmp_path):
+    assert br.classes["C"] == "Classe C" and us.classes["T"].startswith("Technician") and "H" in ca.classes
+    assert BandPlan("IARU-R1", custom_path=tmp_path / "x.json").classes == {}
+
+
+def test_us_plan_follows_fcc_part_97(us):
+    assert us.segment_for(3_510_000).classes == "E"                       # 3.500-3.525: só Extra
+    assert us.segment_for(7_010_000).classes == "E" and us.segment_for(14_010_000).classes == "E"
+    assert us.max_power("E") == 1500 and us.max_power("T") == 200
+    # Technician: CW em 80/40/15 m, SSB só de 28,3 a 28,5 MHz
+    assert us.tx_status(7_050_000, "T", "CW").ok
+    assert us.tx_status(7_050_000, "T", "DIG").level == "mode"
+    assert us.tx_status(7_200_000, "T", "SSB").level == "class"
+    assert us.tx_status(28_400_000, "T", "SSB").ok
+    assert us.tx_status(28_100_000, "T", "SSB").level == "mode"           # 28,0-28,3: só dados/CW
+    assert us.tx_status(14_074_000, "T", "DIG").level == "class"          # Technician sem 20 m
+    # General: sem 3,6-3,8 MHz nem 14,150-14,225 MHz
+    assert us.tx_status(3_650_000, "G", "SSB").level == "class"
+    assert us.tx_status(3_850_000, "G", "SSB").ok
+    assert us.tx_status(14_200_000, "G", "SSB").level == "class"
+    assert us.tx_status(14_250_000, "G", "SSB").ok
+    # emissões: fonia não é permitida em 80 m (3,5-3,6 MHz) nem dados em 75 m
+    assert us.tx_status(3_550_000, "E", "SSB").level == "mode"
+    assert us.tx_status(3_700_000, "E", "DIG").level == "mode"
+    assert us.tx_status(9_000_000, "E", "SSB").level == "outside"
+    assert us.segment_for(5_332_000).note.startswith("Canal 5332") and us.segment_for(5_360_000).note.startswith("Até 9,15")
+    assert us.segment_for(5_340_000) is None                              # entre canais de 60 m: sem transmissão
+
+
+def test_canada_plan_follows_rbr4_schedule_i(ca):
+    assert ca.band_range("80m") == (3_500_000, 4_000_000) and ca.band_range("40m") == (7_000_000, 7_300_000)
+    assert ca.segment_for(14_074_000).classes == "HA" and ca.segment_for(50_200_000).classes == "BHA"
+    assert ca.tx_status(14_074_000, "B", "DIG").level == "class"           # Básico sem Honours não tem HF
+    assert ca.tx_status(14_074_000, "H", "DIG").ok and ca.tx_status(14_074_000, "A", "DIG").ok
+    assert ca.tx_status(50_200_000, "B", "SSB").ok                         # 6 m: todas as qualificações
+    assert ca.tx_status(10_120_000, "A", "SSB").level == "mode"            # 30 m: largura máx. 1 kHz
+    assert ca.tx_status(10_120_000, "A", "DIG").ok
+    assert ca.segment_for(5_332_000) is not None and ca.segment_for(5_340_000) is None
+    assert ca.max_power("A") == 2250 and ca.max_power("H") == 560
+
+
+def test_digital_presets_are_digital_segments_in_us_and_canada(us, ca):
+    dig = json.loads((DATA / "digital_modes.json").read_text(encoding="utf-8"))
+    for plan, cls in ((us, "E"), (ca, "A")):
+        for d in dig:
+            if d["type"] not in ("FT8", "FT4"):
+                continue
+            st = plan.tx_status(d["freq"], cls, "DIG")
+            assert st.ok, (plan.plan_id, d["label"], st.text)
+
+
+def test_legacy_class_is_migrated_to_the_brazilian_plan(tmp_path, monkeypatch):
+    monkeypatch.setenv("IC7300_APPDATA", str(tmp_path))
+    from ic7300.settings import Settings
+
+    (tmp_path / "settings.json").write_text(json.dumps({"license_class": "B", "callsign": "PY2XX"}), encoding="utf-8")
+    assert Settings.load().classes_by_plan == {"BR": "B"}

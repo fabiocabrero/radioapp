@@ -18,7 +18,7 @@ Marque **Simulador** para testar sem o rádio. Para o rádio real: no menu do IC
 - Frequência (roda do mouse, duplo clique para digitar), modos LSB/USB/CW/CW-R/AM/FM/RTTY, DATA, filtros, passo, PTT
 - Medidores S, potência e ROE
 - Espectro e waterfall do scope do rádio (CI-V 0x27), com faixa do plano de bandas; fallback para espectro do áudio
-- **Plano de bandas por país**: Brasil (classes A/B/C, modos liberados por segmento, potência máxima por classe, balizas e repetidoras) e planos genéricos da IARU Regiões 1, 2 e 3. O plano é escolhido pelo indicativo (ou pela posição) e pode ser trocado em Local / GPS; informe sua classe para ver os privilégios e receber avisos antes de transmitir. Arquivos extras em `bandplans_custom.json` na pasta de dados do app (veja abaixo)
+- **Plano de bandas por país**: Brasil (classes A/B/C, modos liberados por segmento, potência máxima por classe, balizas e repetidoras) e planos genéricos da IARU Regiões 1, 2 e 3. O plano é escolhido pelo indicativo (ou, sem indicativo, por uma caixa aproximada do país) e pode ser trocado em Local / GPS; informe sua classe para ver os privilégios e receber avisos antes de transmitir. Arquivos extras em `bandplans_custom.json` na pasta de dados do app (veja abaixo)
 - **FT8 e FT4**: decodificação contínua por slot, país de cada estação, sugestão de resposta (duplo clique), TX com PTT automático, botão de parada
 - Frequências de FT8/FT4/JS8/WSPR/FT2/GhostNet (tabela do firmware X6100), sintoniza em USB + DATA
 - Decodificador de CW (tom automático, WPM adaptativo) e envio de CW pelo manipulador do rádio, macros F1-F8
@@ -49,6 +49,14 @@ Testado com o cliente Hamlib 4 que acompanha o WSJT-X (frequência, modo, PTT, n
   (requisitos técnicos e operacionais). As classes e os modos por segmento foram lidos do gráfico, não de uma tabela em texto. Potências:
   Classe A 1500 W, B 1000 W, C 100 W; 60 m: 25 W EIRP. Não consegui abrir o texto oficial do Ato 926 (o site da Anatel estava em
   manutenção): **confira os limites no Ato vigente antes de transmitir**. O Ato 3448/2026 (requisitos operacionais) mantém as classes A, B e C.
+- **Estados Unidos (FCC)**: gerado do texto do eCFR (47 CFR §§ 97.301, 97.303, 97.305, 97.307 e 97.313, versão de 29/10/2026), coluna da Região 2:
+  privilégios por classe (Extra, Advanced, General, Technician/Novice), sub-bandas de dados e de fonia, Technician só CW em 80/40/15 m, os cinco
+  canais de 60 m e as potências. Vale para os EUA contíguos, o Alasca e o Havaí; fonia em 7075-7100 kHz depende da região (nota no plano).
+- **Canadá (ISED)**: gerado da Tabela I do RBR-4, Issue 3 (jul/2022): faixas, larguras máximas e qualificações (Básico, Básico com Honours ou Morse
+  5 wpm, Avançado); HF exige Honours ou Avançado. O uso CW/digital/fonia dentro das faixas segue o plano IARU R2 (não é exigência legal).
+- **Outros países**: ainda não incluídos (Reino Unido, Argentina, Chile, Portugal, Espanha, Uruguai, Paraguai): a Ofcom bloqueia acesso automatizado,
+  o Boletín Oficial argentino não respondeu e, para os demais, não achei o texto vigente, só versões antigas, conflitantes ou bancos de perguntas de
+  prova. Se você colocar o PDF da norma de um país na pasta do projeto (como fez com o driver), eu o leio e gero o plano com `tools/plan_builder.py`.
 - **IARU R1/R2/R3**: genéricos (alocações da UIT por região e uso típico); não trazem classes nem potências. Para outro país, copie
   `ic7300/data/bandplans.json` para `bandplans_custom.json` na pasta de dados (`%APPDATA%\IC7300App`) e edite: planos com o mesmo id
   substituem os do app, ids novos aparecem na lista.
