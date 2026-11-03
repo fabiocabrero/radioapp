@@ -99,6 +99,12 @@ class Radio:
         self._threads: list[threading.Thread] = []
         self._last_reply = 0.0
         self._scope_on = False
+        self._scope_touched = False
+        self._snapshot_done = False
+        self._scope_reads: dict[int, bytes] = {}
+        self.saved_scope: dict = {}
+        self._baseline: Optional[tuple] = None
+        self.restore_on_exit = False
 
     # ---- ciclo de vida ----
     def start(self) -> None:
@@ -108,14 +114,18 @@ class Radio:
             t.start()
             self._threads.append(t)
         self._send(bytes([civ.CMD_READ_ID, 0x00]))
+        self.snapshot()  # guarda o estado do rádio antes de qualquer alteração (devolvido ao sair)
 
     def stop(self) -> None:
+        try:
+            if self._scope_touched:
+                self.restore_scope()
+            if self.restore_on_exit:
+                self.restore_basic()
+            time.sleep(0.25)  # deixa o rádio processar os últimos comandos antes de fechar a porta
+        except Exception:
+            pass
         self._stop.set()
-        if self._scope_on:
-            try:
-                self.set_scope(False)
-            except Exception:
-                pass
         for t in self._threads:
             t.join(timeout=1)
         self._threads.clear()
@@ -161,6 +171,9 @@ class Radio:
         self._send(bytes([civ.CMD_SEND_CW, 0xFF]))
 
     def set_scope(self, on: bool, span_hz: Optional[int] = None) -> None:
+        if on:
+            self.snapshot()  # antes da primeira alteração
+            self._scope_touched = True
         self._send(bytes([civ.CMD_SCOPE, civ.SCOPE_ON_OFF, 1 if on else 0]))
         if on:
             self._send(bytes([civ.CMD_SCOPE, civ.SCOPE_WAVE_OUTPUT, 1]))
@@ -170,8 +183,53 @@ class Radio:
         self._scope_on = on
 
     def set_scope_span(self, span_hz: int) -> None:
+        self._scope_touched = True
         # Largura em modo centrado: valor em Hz de meia-largura, formato BCD de frequência
         self._send(bytes([civ.CMD_SCOPE, civ.SCOPE_SPAN, 0x00]) + civ.freq_to_bcd(span_hz))
+
+    # ---- estado do rádio a devolver ao sair ----
+    def snapshot(self, timeout: float = 1.5) -> None:
+        """Lê o que o app vai alterar (scope e, se pedido, frequência e modo) para devolver ao rádio ao sair."""
+        if self._snapshot_done:
+            return
+        self._snapshot_done = True
+        self._scope_reads.clear()
+        for payload in (bytes([civ.CMD_SCOPE, civ.SCOPE_ON_OFF]), bytes([civ.CMD_SCOPE, civ.SCOPE_WAVE_OUTPUT]),
+                        bytes([civ.CMD_SCOPE, civ.SCOPE_MODE, 0x00]), bytes([civ.CMD_SCOPE, civ.SCOPE_SPAN, 0x00])):
+            self._send(payload)
+        end = time.time() + timeout
+        while time.time() < end and not (len(self._scope_reads) >= 4 and self.state.connected):
+            time.sleep(0.02)
+        r, saved = self._scope_reads, {}
+        if civ.SCOPE_ON_OFF in r and r[civ.SCOPE_ON_OFF]:
+            saved["on"] = bool(r[civ.SCOPE_ON_OFF][-1])
+        if civ.SCOPE_WAVE_OUTPUT in r and r[civ.SCOPE_WAVE_OUTPUT]:
+            saved["output"] = bool(r[civ.SCOPE_WAVE_OUTPUT][-1])
+        if civ.SCOPE_MODE in r and r[civ.SCOPE_MODE]:
+            saved["mode"] = r[civ.SCOPE_MODE][-1]
+        if civ.SCOPE_SPAN in r and len(r[civ.SCOPE_SPAN]) >= 5:
+            saved["span"] = civ.bcd_to_freq(r[civ.SCOPE_SPAN][-5:])
+        self.saved_scope = saved
+        st = self.state
+        self._baseline = (st.freq, st.mode, st.data_mode, st.filter) if st.connected else None
+        if len(saved) < 4:
+            self.on_message("Não consegui ler toda a configuração do scope do rádio; ao sair só a saída do scope será desligada.")
+
+    def restore_scope(self) -> None:
+        saved = self.saved_scope
+        if len(saved) < 4:
+            self._send(bytes([civ.CMD_SCOPE, civ.SCOPE_ON_OFF, 0]))  # sem leitura completa: ao menos desliga a saída do scope
+            return
+        self._send(bytes([civ.CMD_SCOPE, civ.SCOPE_MODE, 0x00, saved["mode"]]))
+        self.set_scope_span(saved["span"])
+        self._send(bytes([civ.CMD_SCOPE, civ.SCOPE_WAVE_OUTPUT, 1 if saved["output"] else 0]))
+        self._send(bytes([civ.CMD_SCOPE, civ.SCOPE_ON_OFF, 1 if saved["on"] else 0]))
+
+    def restore_basic(self) -> None:
+        if self._baseline:
+            freq, mode, data, filt = self._baseline
+            self.set_mode(mode, data, filt)
+            self.set_freq(freq)
 
     # ---- recepção ----
     def _read_loop(self) -> None:
@@ -243,6 +301,9 @@ class Radio:
                 st.levels[name] = civ.bcd_to_int(data[1:3])
         elif cmd == civ.CMD_TRANSMIT and len(data) >= 2 and data[0] == 0x00:
             st.ptt = bool(data[1])
+        elif cmd == civ.CMD_SCOPE and data and data[0] in (civ.SCOPE_ON_OFF, civ.SCOPE_WAVE_OUTPUT, civ.SCOPE_MODE, civ.SCOPE_SPAN):
+            self._scope_reads[data[0]] = bytes(data[1:])
+            return
         elif cmd == civ.CMD_SCOPE and data and data[0] == civ.SCOPE_WAVE:
             line = self._scope.feed(data[1:])
             if line:
@@ -265,6 +326,8 @@ class SimTransport:
         self.freq, self.mode, self.data, self.filter, self.ptt = 14_074_000, 1, 0, 1, False
         self.levels = {"af": 80, "rf": 255, "sql": 0, "power": 128, "key_speed": 100}
         self._scope_on = False
+        self.scope_out = False
+        self.scope_mode = 0
         self._span = 25_000
         self._t0 = time.time()
         self.sent_cw: list[str] = []
@@ -333,11 +396,33 @@ class SimTransport:
                 self.sent_cw.append(d.decode("ascii", "ignore"))
             self._reply(ack)
         elif cmd == civ.CMD_SCOPE:
-            if d[0] == civ.SCOPE_ON_OFF:
-                self._scope_on = bool(d[1])
-            elif d[0] == civ.SCOPE_SPAN and len(d) >= 7:
-                self._span = max(1000, civ.bcd_to_freq(d[2:7]))
-            self._reply(ack)
+            sub = d[0]
+            if sub == civ.SCOPE_ON_OFF:
+                if len(d) >= 2:
+                    self._scope_on = bool(d[1])
+                    self._reply(ack)
+                else:
+                    self._reply(bytes([civ.CMD_SCOPE, sub, int(self._scope_on)]))
+            elif sub == civ.SCOPE_WAVE_OUTPUT:
+                if len(d) >= 2:
+                    self.scope_out = bool(d[1])
+                    self._reply(ack)
+                else:
+                    self._reply(bytes([civ.CMD_SCOPE, sub, int(self.scope_out)]))
+            elif sub == civ.SCOPE_MODE:
+                if len(d) >= 3:
+                    self.scope_mode = d[2]
+                    self._reply(ack)
+                else:
+                    self._reply(bytes([civ.CMD_SCOPE, sub, 0x00, self.scope_mode]))
+            elif sub == civ.SCOPE_SPAN:
+                if len(d) >= 7:
+                    self._span = max(1000, civ.bcd_to_freq(d[2:7]))
+                    self._reply(ack)
+                else:
+                    self._reply(bytes([civ.CMD_SCOPE, sub, 0x00]) + civ.freq_to_bcd(self._span))
+            else:
+                self._reply(ack)
         else:
             self._reply(ack)
 

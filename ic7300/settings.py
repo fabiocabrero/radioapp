@@ -37,6 +37,7 @@ class Settings:
     rigctl_enabled: bool = False
     rigctl_port: int = 4532
     my_ref: str = ""
+    restore_on_exit: bool = False
     wsjtx_dir: str = ""
     band_plan: str = "auto"
     license_class: str = ""  # legado: classe do plano brasileiro (migrada para classes_by_plan)

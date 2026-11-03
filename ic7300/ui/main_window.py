@@ -110,8 +110,14 @@ class MainWindow(QtWidgets.QMainWindow):
         self.chk_rigctl = QtWidgets.QCheckBox(f"Servidor rigctl (porta {self.settings.rigctl_port})")
         self.chk_rigctl.setToolTip("Permite que WSJT-X, JS8Call, Fldigi etc. usem este app como rádio (Hamlib NET rigctl, 127.0.0.1)")
         self.chk_rigctl.setChecked(self.settings.rigctl_enabled)
+        self.chk_restore = QtWidgets.QCheckBox("Restaurar frequência e modo ao sair")
+        self.chk_restore.setToolTip("Ao desconectar, o rádio volta para a frequência, o modo, o DATA e o filtro de quando o app conectou. "
+                                    "A tela do scope sempre volta ao que estava.")
+        self.chk_restore.setChecked(self.settings.restore_on_exit)
+        self.chk_restore.toggled.connect(self._restore_toggled)
         conn.addWidget(self.chk_sim)
         conn.addWidget(self.chk_rigctl)
+        conn.addWidget(self.chk_restore)
         conn.addStretch()
         self.lbl_status = QtWidgets.QLabel("● Desconectado")
         conn.addWidget(self.lbl_status)
@@ -682,10 +688,16 @@ class MainWindow(QtWidgets.QMainWindow):
         self.radio.on_state = self.bridge.state.emit
         self.radio.on_scope = self.bridge.scope.emit
         self.radio.on_message = self.bridge.message.emit
+        self.radio.restore_on_exit = self.chk_restore.isChecked()
         self.radio.start()
         self.radio.set_scope(True, civ.SCOPE_SPANS_HZ[self.cb_span.currentIndex()])
         self._start_audio()
         self.btn_connect.setText("Desconectar")
+
+    def _restore_toggled(self, on: bool) -> None:
+        self.settings.restore_on_exit = on
+        if self.radio:
+            self.radio.restore_on_exit = on
 
     def _toggle_rigctl(self, on: bool) -> None:
         if self.rigctl:
