@@ -42,11 +42,37 @@ def find_radio_output() -> str:
     return next((n for n in list_output_devices() if "USB Audio CODEC" in n), "")
 
 
-def play_blocking(samples: np.ndarray, device: str) -> None:
-    """Toca áudio mono (48 kHz) no dispositivo e só retorna ao terminar."""
+# No Windows o mesmo dispositivo aparece em várias APIs de áudio; WASAPI (taxa nativa de 48 kHz do codec do IC-7300) tem preferência
+_HOSTAPI_ORDER = ["Windows WASAPI", "Windows DirectSound", "MME", "Windows WDM-KS"]
+
+
+def _norm(name: str) -> str:
+    return "".join(name.lower().split())
+
+
+def resolve_device(name: str, kind: str = "input") -> Optional[int]:
+    """Índice do dispositivo cujo nome combina com `name` (as APIs truncam ou mudam espaços), na API preferida."""
     import sounddevice as sd
 
-    sd.play(samples.astype(np.float32), FS, device=device or None)
+    if not name:
+        return None
+    wanted, field_name = _norm(name), f"max_{kind}_channels"
+    apis = [a["name"] for a in sd.query_hostapis()]
+    found: list[tuple[int, int]] = []
+    for i, d in enumerate(sd.query_devices()):
+        n = _norm(d["name"])
+        if d[field_name] > 0 and (n == wanted or n.startswith(wanted) or wanted.startswith(n)):
+            api = apis[d["hostapi"]]
+            found.append((_HOSTAPI_ORDER.index(api) if api in _HOSTAPI_ORDER else 99, i))
+    return min(found)[1] if found else None
+
+
+def play_blocking(samples: np.ndarray, device: str) -> None:
+    """Toca áudio (mono, 48 kHz) em estéreo no dispositivo e só retorna ao terminar."""
+    import sounddevice as sd
+
+    mono = samples.astype(np.float32)
+    sd.play(np.column_stack([mono, mono]), FS, device=resolve_device(device, "output"))
     sd.wait()
 
 
@@ -72,7 +98,7 @@ class AudioSource:
 class DeviceAudio(AudioSource):
     def __init__(self, device: str, on_samples: Callable[[np.ndarray], None]) -> None:
         super().__init__(on_samples)
-        self.device = device or None
+        self.device = device
         self._stream = None
 
     def start(self) -> None:
@@ -81,7 +107,10 @@ class DeviceAudio(AudioSource):
         def cb(indata, frames, time_info, status):
             self.on_samples(indata[:, 0].copy())
 
-        self._stream = sd.InputStream(device=self.device, channels=1, samplerate=FS, blocksize=2400, callback=cb)
+        index = resolve_device(self.device, "input")
+        if index is None and self.device:
+            raise RuntimeError(f"Dispositivo de áudio não encontrado: {self.device}")
+        self._stream = sd.InputStream(device=index, channels=1, samplerate=FS, blocksize=2400, callback=cb)
         self._stream.start()
 
     def stop(self) -> None:

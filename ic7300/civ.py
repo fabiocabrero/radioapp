@@ -170,7 +170,9 @@ class ScopeAssembler:
             return None
         self._parts[seq] = bytes(body)
         if seq == total and len(self._parts) == total:
-            mode, low, high, oor = self._header
+            mode, a, b, oor = self._header
+            # modo centrado (0): frequência central e meia-largura; modo fixo (1): bordas baixa e alta (visto no IC-7300 real)
+            low, high = (a - b, a + b) if mode == 0 else (a, b)
             values = b"".join(self._parts[i] for i in range(1, total + 1))
             self._header = None
             self._parts.clear()

@@ -80,3 +80,31 @@ def test_dxcc_and_bands():
     assert plan.suggest_mode(7_030_000) == ("CW", False)
     assert plan.suggest_mode(7_150_000) == ("LSB", False)
     assert s_meter_text(120) == "S9"
+
+
+def test_data_mode_reply_with_filter_zero_keeps_filter():
+    radio = Radio(SimTransport())
+    radio.state.filter = 2
+    radio._handle(civ.Frame(civ.CONTROLLER_ADDRESS, civ.IC7300_ADDRESS, bytes([civ.CMD_MENU, 0x06, 0x00, 0x00])))
+    assert radio.state.filter == 2 and radio.state.data_mode is False
+    radio._handle(civ.Frame(civ.CONTROLLER_ADDRESS, civ.IC7300_ADDRESS, bytes([civ.CMD_MENU, 0x06, 0x01, 0x03])))
+    assert radio.state.filter == 3 and radio.state.data_mode is True
+
+
+def test_scope_header_center_and_fixed_modes():
+    center = civ.freq_to_bcd(14_074_000) + civ.freq_to_bcd(25_000)
+
+    def line(mode):
+        asm = civ.ScopeAssembler()
+        out = None
+        for seq in range(1, 12):
+            body = bytes([0x00, civ.int_to_bcd(seq, 1)[0], civ.int_to_bcd(11, 1)[0]])
+            if seq == 1:
+                body += bytes([mode]) + center + b"\x00"
+            out = asm.feed(body + bytes([10]) * 5) or out
+        return out
+
+    c = line(0)   # centrado: centro 14.074.000 e meia-largura 25.000
+    assert (c.low_hz, c.high_hz) == (14_049_000, 14_099_000)
+    f = line(1)   # fixo: o mesmo par de campos são as bordas
+    assert (f.low_hz, f.high_hz) == (14_074_000, 25_000)

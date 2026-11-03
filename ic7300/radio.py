@@ -136,6 +136,7 @@ class Radio:
         self.on_state(replace(self.state))
 
     def set_mode(self, mode: str, data: bool = False, filt: int = 1) -> None:
+        filt = min(3, max(1, filt))  # o IC-7300 só aceita FIL1 a FIL3
         self._send(bytes([civ.CMD_SET_MODE, civ.MODE_CODES[mode], filt]))
         self._send(bytes([civ.CMD_MENU, 0x06, 1 if data else 0, filt]))
         self.state.mode, self.state.data_mode, self.state.filter = mode, data, filt
@@ -225,7 +226,9 @@ class Radio:
             if len(data) > 1:
                 st.filter = data[1]
         elif cmd == civ.CMD_MENU and len(data) >= 3 and data[0] == 0x06:
-            st.data_mode, st.filter = bool(data[1]), data[2]
+            st.data_mode = bool(data[1])
+            if 1 <= data[2] <= 3:  # com DATA desligado o IC-7300 responde filtro 00: mantém o filtro já conhecido
+                st.filter = data[2]
         elif cmd == civ.CMD_METER and len(data) >= 3:
             raw = civ.bcd_to_int(data[1:3])
             key = {civ.METERS["s"]: "s_meter", civ.METERS["po"]: "power", civ.METERS["swr"]: "swr"}.get(data[0])
@@ -354,7 +357,7 @@ class SimTransport:
                     level += amp * math.exp(-((x - c) / 0.012) ** 2)
                 level += 40 * math.exp(-((x - 0.0) / 0.01) ** 2)
                 vals.append(min(160, int(level)))
-            header = bytes([0x00]) + civ.freq_to_bcd(low) + civ.freq_to_bcd(high) + b"\x00"
+            header = bytes([0x00]) + civ.freq_to_bcd(self.freq) + civ.freq_to_bcd(self._span) + b"\x00"  # centrado: centro e meia-largura
             sizes = [25] + [45] * 10  # 25 + 450 = 475
             pos = 0
             for seq in range(1, civ.SCOPE_DIVISIONS + 1):
