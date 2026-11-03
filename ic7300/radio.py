@@ -147,6 +147,7 @@ class Radio:
 
     def set_level(self, name: str, value: int) -> None:
         self._send(bytes([civ.CMD_LEVEL, civ.LEVELS[name]]) + civ.int_to_bcd(value, 2))
+        self.state.levels[name] = value  # vale já, até a próxima leitura confirmar
 
     def set_func(self, name: str, value: int) -> None:
         self._send(bytes([civ.CMD_FUNC, civ.FUNCS[name], value]))

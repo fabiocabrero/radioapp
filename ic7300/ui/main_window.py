@@ -176,6 +176,24 @@ class MainWindow(QtWidgets.QMainWindow):
             meters.addWidget(bar)
         root.addLayout(meters)
 
+        # Volume, ganho de RF e squelch do rádio (CI-V 0x14); seguem o que o rádio informa
+        levels = QtWidgets.QHBoxLayout()
+        self.level_sliders: dict[str, QtWidgets.QSlider] = {}
+        self._level_pending: dict[str, int] = {}
+        for key, label in (("af", "Volume (AF)"), ("rf", "Ganho RF"), ("sql", "Squelch")):
+            sl = QtWidgets.QSlider(QtCore.Qt.Orientation.Horizontal)
+            sl.setRange(0, 255)
+            sl.setToolTip(f"{label}: igual ao botão do rádio (0 a 255)")
+            lbl = QtWidgets.QLabel(f"{label}  0%")
+            lbl.setMinimumWidth(110)
+            sl.valueChanged.connect(lambda v, k=key, l=lbl, n=label: self._level_moved(k, v, l, n))
+            levels.addWidget(lbl)
+            levels.addWidget(sl, 1)
+            self.level_sliders[key] = sl
+            sl._label, sl._name = lbl, label
+        root.addLayout(levels)
+        self._level_timer = QtCore.QTimer(self, interval=80, singleShot=True, timeout=self._send_levels)
+
         # Espectro + abas
         split = QtWidgets.QSplitter(QtCore.Qt.Orientation.Vertical)
         self.spectrum = SpectrumView(self.plan)
@@ -754,6 +772,12 @@ class MainWindow(QtWidgets.QMainWindow):
         self.cb_filter.setCurrentIndex(max(0, min(2, st.filter - 1)))
         self.cb_filter.blockSignals(False)
         self.freq_disp.step = self.cb_step.currentData() if st.mode not in ("CW", "CW-R") or self.cb_step.currentData() <= 1000 else 100
+        for key, sl in self.level_sliders.items():
+            if key in st.levels and not sl.isSliderDown() and key not in self._level_pending:
+                sl.blockSignals(True)
+                sl.setValue(st.levels[key])
+                sl.blockSignals(False)
+                sl._label.setText(f"{sl._name}  {round(st.levels[key] / 255 * 100)}%")
         self.bar_s.setValue(st.s_meter)
         self.bar_s.setFormat(f"S  {s_meter_text(st.s_meter)}")
         self.bar_po.setValue(st.power)
@@ -836,6 +860,17 @@ class MainWindow(QtWidgets.QMainWindow):
         start, stop = self.plan.band_range(name)
         hz = self.settings.last_freq_by_band.get(name) or start + 20_000
         self._tune(hz, auto_mode=True)
+
+    def _level_moved(self, key: str, value: int, label: QtWidgets.QLabel, name: str) -> None:
+        label.setText(f"{name}  {round(value / 255 * 100)}%")
+        self._level_pending[key] = value
+        self._level_timer.start()  # agrupa movimentos rápidos do controle em um comando
+
+    def _send_levels(self) -> None:
+        pending, self._level_pending = self._level_pending, {}
+        if self.radio:
+            for key, value in pending.items():
+                self.radio.set_level(key, value)
 
     def _ptt(self, on: bool) -> None:
         if on and not self._tx_guard():
