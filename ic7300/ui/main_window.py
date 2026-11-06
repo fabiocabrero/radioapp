@@ -22,8 +22,11 @@ from ..radio import Radio, RadioState, SerialTransport, SimTransport, list_seria
 from ..rigctl import RigctlServer
 from ..settings import Settings
 from ..spots import ClusterClient, Spot, fetch_pota
+from .appmenu import AppMenu
 from .conteststab import ContestsTab
 from .digitaltabs import JtTab, RttyTab
+from .extappstab import ExtAppsTab
+from .protocolstab import ProtocolsTab
 from .sstvtab import SstvTab
 from .maptab import MapTab
 from .potatab import PotaTab
@@ -33,6 +36,31 @@ from .widgets import FrequencyDisplay, SpectrumView
 MODE_BUTTONS = ["LSB", "USB", "CW", "CW-R", "AM", "FM", "RTTY"]
 MODE_STEPS = {"LSB": 500, "USB": 500, "CW": 100, "CW-R": 100, "AM": 1000, "FM": 1000, "RTTY": 100, "RTTY-R": 100}
 SCOPE_SPAN_LABELS = ["±2,5 kHz", "±5 kHz", "±10 kHz", "±25 kHz", "±50 kHz", "±100 kHz", "±250 kHz", "±500 kHz"]
+
+
+STYLE = (
+    "QMainWindow,QWidget{background:#171c23;color:#d6dde6}QLabel{background:transparent}"
+    "QPushButton{background:#2a323d;border:1px solid #3a4452;border-radius:5px;padding:5px 9px}"
+    "QPushButton:checked{background:#2e7d32}QPushButton:hover{background:#34404e}"
+    "QLineEdit,QComboBox,QPlainTextEdit,QTextBrowser,QListWidget,QTableWidget,QSpinBox,QDoubleSpinBox{background:#10151c;border:1px solid #2c3541;padding:3px}"
+    "QTabBar::tab{padding:6px 14px;background:#222a34}QTabBar::tab:selected{background:#2e7d32}"
+    "QHeaderView::section{background:#222a34;border:0;padding:4px}"
+    "QProgressBar{border:1px solid #2c3541;text-align:center;background:#10151c}"
+    "QProgressBar::chunk{background:#43a047}"
+    "QFrame#header{background:#0f141a;border-bottom:1px solid #2c3541}"
+    "QLabel#title{font:700 13pt}QLabel#mini{font:600 11pt 'Consolas';color:#7CFC9A;padding:0 8px}"
+    "QLabel#txBadge{background:#d32f2f;color:white;font-weight:700;border-radius:4px}"
+    "QPushButton#panic{background:#8e2420;border-color:#b3322d;font-weight:700}QPushButton#panic:hover{background:#b3322d}"
+    "QPushButton#tile{background:#222b36;border:1px solid #33404f;border-radius:12px}"
+    "QPushButton#tile:hover{background:#2c3a49;border-color:#4a90d9}"
+    "QLabel#tileIcon{font-size:28pt;background:transparent}QLabel#tileName{font:700 11pt;background:transparent}"
+    "QLabel#tileSub{color:#9aa7b6;font-size:8pt;background:transparent}"
+    "QLabel#sectionTitle{color:#8fb7e8;font:700 9pt}"
+    "QFrame#card{background:#1e2630;border:1px solid #2c3541;border-radius:8px}"
+    "QLabel#cardTitle{font:700 12pt}QLabel#cardTips{color:#9aa7b6}"
+    "QGroupBox{border:1px solid #2c3541;border-radius:6px;margin-top:12px;padding-top:12px}"
+    "QGroupBox::title{subcontrol-origin:margin;left:10px;color:#8fb7e8}"
+)
 
 
 class Bridge(QtCore.QObject):
@@ -85,44 +113,154 @@ class MainWindow(QtWidgets.QMainWindow):
         central = QtWidgets.QWidget()
         self.setCentralWidget(central)
         root = QtWidgets.QVBoxLayout(central)
+        root.setContentsMargins(0, 0, 0, 0)
+        root.setSpacing(0)
+        root.addWidget(self._build_header())
+        self.stack = QtWidgets.QStackedWidget()
+        root.addWidget(self.stack, 1)
+        self.pages: dict[str, QtWidgets.QWidget] = {}
+        self._titles: dict[str, str] = {}
+        self._current_page = "radio"
 
-        # Conexão
-        conn = QtWidgets.QHBoxLayout()
-        self.cb_port = QtWidgets.QComboBox()
-        self.cb_port.setMinimumWidth(220)
-        self.cb_baud = QtWidgets.QComboBox()
-        self.cb_baud.addItems(["115200", "57600", "38400", "19200", "9600", "4800"])
-        self.cb_baud.setCurrentText(str(self.settings.baud))
-        self.ed_addr = QtWidgets.QLineEdit(f"{self.settings.civ_address:02X}")
-        self.ed_addr.setMaximumWidth(40)
-        self.cb_audio = QtWidgets.QComboBox()
-        self.cb_audio.setMinimumWidth(200)
-        self.chk_sim = QtWidgets.QCheckBox("Simulador (sem rádio)")
-        self.chk_sim.setChecked(self.settings.simulator)
-        self.btn_connect = QtWidgets.QPushButton("Conectar")
-        self.btn_refresh = QtWidgets.QPushButton("↻")
-        self.btn_refresh.setMaximumWidth(30)
-        for label, w in (("Porta CI-V", self.cb_port), ("", self.btn_refresh), ("Baud", self.cb_baud),
-                         ("Endereço", self.ed_addr), ("Áudio", self.cb_audio)):
-            if label:
-                conn.addWidget(QtWidgets.QLabel(label))
-            conn.addWidget(w)
-        self.chk_rigctl = QtWidgets.QCheckBox(f"Servidor rigctl (porta {self.settings.rigctl_port})")
-        self.chk_rigctl.setToolTip("Permite que WSJT-X, JS8Call, Fldigi etc. usem este app como rádio (Hamlib NET rigctl, 127.0.0.1)")
-        self.chk_rigctl.setChecked(self.settings.rigctl_enabled)
-        self.chk_restore = QtWidgets.QCheckBox("Restaurar frequência e modo ao sair")
-        self.chk_restore.setToolTip("Ao desconectar, o rádio volta para a frequência, o modo, o DATA e o filtro de quando o app conectou. "
-                                    "A tela do scope sempre volta ao que estava.")
-        self.chk_restore.setChecked(self.settings.restore_on_exit)
-        self.chk_restore.toggled.connect(self._restore_toggled)
-        conn.addWidget(self.chk_sim)
-        conn.addWidget(self.chk_rigctl)
-        conn.addWidget(self.chk_restore)
-        conn.addStretch()
+        # cada área é uma tela própria, aberta pela grade de Apps
+        self._add_page("radio", "Rádio", self._build_radio_page())
+        self.menu = AppMenu()
+        self._add_page("apps", "Apps", self.menu)
+        self._add_page("cw", "CW", self._tab_cw())
+        self._add_page("ft8", "FT8 / FT4", self._tab_ft())
+        self.rtty = RttyTab(self.settings, lambda: self.state, self._ft_ptt, self._ft_play, lambda: self.ed_call.text().strip().upper())
+        self._add_page("rtty", "RTTY", self.rtty)
+        self.sstv = SstvTab(self.settings, lambda: self.state, self._ft_ptt, self._ft_play)
+        self.sstv.tune_requested.connect(self._sstv_tune)
+        self._add_page("sstv", "SSTV", self.sstv)
+        self.jt = JtTab(self.settings, self.cty, lambda: self.state)
+        self._add_page("wsjt", "FST4 / Q65 / WSPR", self.jt)
+        self._add_page("digital", "Frequências digitais", self._tab_digital())
+        self.protocols = ProtocolsTab()
+        self.protocols.open_page.connect(self.show_page)
+        self.protocols.tune_requested.connect(self._protocol_tune)
+        self._add_page("protocols", "Protocolos e modos", self.protocols)
+        self.ext = ExtAppsTab(self.settings)
+        self.ext.rigctl_requested.connect(self._want_rigctl)
+        self.ext.message.connect(self.bridge.message.emit)
+        self._add_page("ext", "Winlink e outros", self.ext)
+        self.map = MapTab(self.plan, self.cty)
+        self._add_page("map", "Mapa e propagação", self.map)
+        self.swl = SwlTab(self.plan)
+        self.map.solar_updated.connect(self.swl.set_solar)
+        self.swl.tune_requested.connect(self._swl_tune)
+        self._add_page("swl", "Ondas curtas", self.swl)
+        self._add_page("bands", "Plano de bandas", self._tab_bands())
+        self._add_page("cluster", "DX Cluster", self._tab_spots())
+        self.pota = PotaTab(self.plan, self.log, lambda: (self.settings.lat, self.settings.lon) if (self.settings.lat or self.settings.lon) else None)
+        self.pota.spot_chosen.connect(self._pota_chosen)
+        self.pota.spots_loaded.connect(self._pota_to_map)
+        self._add_page("pota", "POTA", self.pota)
+        self.contests = ContestsTab(self.settings, self.cty, lambda: self.state, lambda: self.settings.callsign)
+        self._add_page("contests", "Concursos", self.contests)
+        self._add_page("log", "Log", self._tab_log())
+        self._add_page("location", "Local / GPS", self._tab_location())
+        self._add_page("settings", "Configurações", self._page_settings())
+
+        self.lbl_utc = QtWidgets.QLabel()
+        self.lbl_grid = QtWidgets.QLabel()
+        self.statusBar().addPermanentWidget(self.lbl_grid)
+        self.statusBar().addPermanentWidget(self.lbl_utc)
+        self.setMinimumSize(1100, 700)
+        for seq, key in (("F1", "radio"), ("F2", "apps")):
+            QtGui.QShortcut(QtGui.QKeySequence(seq), self, activated=lambda k=key: self.show_page(k))
+        QtGui.QShortcut(QtGui.QKeySequence("Esc"), self, activated=self._go_back)
+        self.setStyleSheet(STYLE)
+        self.show_page("radio")
+
+    # ---- navegação ----
+    def _add_page(self, key: str, title: str, widget: QtWidgets.QWidget) -> None:
+        self.pages[key] = widget
+        self._titles[key] = title
+        self.stack.addWidget(widget)
+
+    def show_page(self, key: str) -> None:
+        if key not in self.pages:
+            return
+        self._current_page = key
+        self.stack.setCurrentWidget(self.pages[key])
+        self.lbl_title.setText(self._titles[key])
+        self.btn_home.setChecked(key == "radio")
+        self.btn_apps.setChecked(key == "apps")
+
+    def _go_back(self) -> None:
+        self.show_page("apps" if self._current_page not in ("apps", "radio") else "radio")
+
+    def _build_header(self) -> QtWidgets.QWidget:
+        bar = QtWidgets.QFrame()
+        bar.setObjectName("header")
+        h = QtWidgets.QHBoxLayout(bar)
+        h.setContentsMargins(12, 6, 12, 6)
+        self.btn_home = QtWidgets.QPushButton("📻  Rádio")
+        self.btn_apps = QtWidgets.QPushButton("▦  Apps")
+        for b in (self.btn_home, self.btn_apps):
+            b.setCheckable(True)
+            h.addWidget(b)
+        self.lbl_title = QtWidgets.QLabel("")
+        self.lbl_title.setObjectName("title")
+        h.addWidget(self.lbl_title)
+        h.addStretch()
+        self.lbl_mini = QtWidgets.QLabel("— sem rádio —")
+        self.lbl_mini.setObjectName("mini")
+        self.lbl_tx = QtWidgets.QLabel(" TX ")
+        self.lbl_tx.setObjectName("txBadge")
+        self.lbl_tx.hide()
+        self.btn_panic = QtWidgets.QPushButton("⏹  PARAR TX")
+        self.btn_panic.setObjectName("panic")
+        self.btn_panic.setToolTip("Interrompe qualquer transmissão: PTT, FT8, RTTY, SSTV e CW")
         self.lbl_status = QtWidgets.QLabel("● Desconectado")
-        conn.addWidget(self.lbl_status)
-        conn.addWidget(self.btn_connect)
-        root.addLayout(conn)
+        self.btn_connect = QtWidgets.QPushButton("Conectar")
+        for w in (self.lbl_mini, self.lbl_tx, self.btn_panic, self.lbl_status, self.btn_connect):
+            h.addWidget(w)
+        return bar
+
+    def _update_header(self, st: RadioState) -> None:
+        mode = st.mode + ("-D" if st.data_mode else "")
+        self.lbl_mini.setText(f"{st.freq / 1e6:,.6f} MHz  {mode}  {s_meter_text(st.s_meter)}".replace(",", " "))
+        self.lbl_tx.setVisible(st.ptt)
+
+    def _panic(self) -> None:
+        self._ft_halt()
+        self.rtty._stop()
+        self.sstv._stop()
+        if self.radio:
+            try:
+                self.radio.stop_cw()
+                self.radio.set_ptt(False)
+            except Exception:
+                pass
+        self.btn_ptt.blockSignals(True)
+        self.btn_ptt.setChecked(False)
+        self.btn_ptt.blockSignals(False)
+        self.statusBar().showMessage("Transmissão interrompida.", 6000)
+
+    def _want_rigctl(self) -> None:
+        if not self.chk_rigctl.isChecked():
+            self.chk_rigctl.setChecked(True)
+        if self.rigctl:
+            self.bridge.message.emit(f"Servidor rigctl ativo em 127.0.0.1:{self.settings.rigctl_port}: aponte o programa para ele.")
+
+    def _protocol_tune(self, hz: int, mode: str, data: bool) -> None:
+        if not self.radio:
+            self.bridge.message.emit("Conecte ao rádio (ou ao simulador) para sintonizar.")
+            return
+        self._tune(hz)
+        self.radio.set_mode(mode, data, self.state.filter)
+
+    def _open_data_folder(self) -> None:
+        from ..settings import app_dir
+
+        QtGui.QDesktopServices.openUrl(QtCore.QUrl.fromLocalFile(str(app_dir())))
+
+    # ---- tela do rádio ----
+    def _build_radio_page(self) -> QtWidgets.QWidget:
+        page = QtWidgets.QWidget()
+        root = QtWidgets.QVBoxLayout(page)
 
         # Frequência, modo, PTT
         top = QtWidgets.QHBoxLayout()
@@ -200,54 +338,76 @@ class MainWindow(QtWidgets.QMainWindow):
         root.addLayout(levels)
         self._level_timer = QtCore.QTimer(self, interval=80, singleShot=True, timeout=self._send_levels)
 
-        # Espectro + abas
-        split = QtWidgets.QSplitter(QtCore.Qt.Orientation.Vertical)
+        # Espectro + plano de bandas + waterfall
         self.spectrum = SpectrumView(self.plan)
-        split.addWidget(self.spectrum)
-        self.tabs = QtWidgets.QTabWidget()
-        self.tabs.addTab(self._tab_cw(), "CW")
-        self.map = MapTab(self.plan, self.cty)
-        self.tabs.addTab(self.map, "Mapa / Propagação")
-        self.pota = PotaTab(self.plan, self.log, lambda: (self.settings.lat, self.settings.lon) if (self.settings.lat or self.settings.lon) else None)
-        self.tabs.addTab(self.pota, "POTA")
-        self.pota.spot_chosen.connect(self._pota_chosen)
-        self.pota.spots_loaded.connect(self._pota_to_map)
-        self.rtty = RttyTab(self.settings, lambda: self.state, self._ft_ptt, self._ft_play, lambda: self.ed_call.text().strip().upper())
-        self.tabs.addTab(self.rtty, "RTTY")
-        self.sstv = SstvTab(self.settings, lambda: self.state, self._ft_ptt, self._ft_play)
-        self.tabs.addTab(self.sstv, "SSTV")
-        self.sstv.tune_requested.connect(self._sstv_tune)
-        self.jt = JtTab(self.settings, self.cty, lambda: self.state)
-        self.tabs.addTab(self.jt, "FST4 / Q65 / WSPR")
-        self.contests = ContestsTab(self.settings, self.cty, lambda: self.state, lambda: self.settings.callsign)
-        self.tabs.addTab(self.contests, "Concursos")
-        self.swl = SwlTab(self.plan)
-        self.tabs.addTab(self.swl, "Ondas curtas")
-        self.map.solar_updated.connect(self.swl.set_solar)
-        self.swl.tune_requested.connect(self._swl_tune)
-        self.tabs.addTab(self._tab_ft(), "FT8 / FT4")
-        self.tabs.addTab(self._tab_digital(), "Modos digitais")
-        self.tabs.addTab(self._tab_bands(), "Plano de bandas")
-        self.tabs.addTab(self._tab_spots(), "DX Cluster / POTA")
-        self.tabs.addTab(self._tab_log(), "Log")
-        self.tabs.addTab(self._tab_location(), "Local / GPS")
-        split.addWidget(self.tabs)
-        split.setStretchFactor(0, 3)
-        split.setStretchFactor(1, 2)
-        root.addWidget(split, 1)
+        root.addWidget(self.spectrum, 1)
+        return page
 
-        self.lbl_utc = QtWidgets.QLabel()
-        self.lbl_grid = QtWidgets.QLabel()
-        self.statusBar().addPermanentWidget(self.lbl_grid)
-        self.statusBar().addPermanentWidget(self.lbl_utc)
-        self.setStyleSheet("QMainWindow,QWidget{background:#171c23;color:#d6dde6}"
-                           "QPushButton{background:#2a323d;border:1px solid #3a4452;border-radius:5px;padding:5px 9px}"
-                           "QPushButton:checked{background:#2e7d32}QPushButton:hover{background:#34404e}"
-                           "QLineEdit,QComboBox,QPlainTextEdit,QTableWidget,QSpinBox,QDoubleSpinBox{background:#10151c;border:1px solid #2c3541;padding:3px}"
-                           "QTabBar::tab{padding:6px 14px;background:#222a34}QTabBar::tab:selected{background:#2e7d32}"
-                           "QHeaderView::section{background:#222a34;border:0;padding:4px}"
-                           "QProgressBar{border:1px solid #2c3541;text-align:center;background:#10151c}"
-                           "QProgressBar::chunk{background:#43a047}")
+    # ---- tela de configurações ----
+    def _page_settings(self) -> QtWidgets.QWidget:
+        page = QtWidgets.QWidget()
+        lay = QtWidgets.QVBoxLayout(page)
+        radio_box = QtWidgets.QGroupBox("Rádio (CI-V pela porta USB)")
+        form = QtWidgets.QFormLayout(radio_box)
+        self.cb_port = QtWidgets.QComboBox()
+        self.cb_port.setMinimumWidth(280)
+        self.btn_refresh = QtWidgets.QPushButton("↻  Atualizar lista")
+        prow = QtWidgets.QHBoxLayout()
+        prow.addWidget(self.cb_port, 1)
+        prow.addWidget(self.btn_refresh)
+        form.addRow("Porta serial", prow)
+        self.cb_baud = QtWidgets.QComboBox()
+        self.cb_baud.addItems(["115200", "57600", "38400", "19200", "9600", "4800"])
+        self.cb_baud.setCurrentText(str(self.settings.baud))
+        form.addRow("Velocidade (baud)", self.cb_baud)
+        self.ed_addr = QtWidgets.QLineEdit(f"{self.settings.civ_address:02X}")
+        self.ed_addr.setMaximumWidth(60)
+        form.addRow("Endereço CI-V (hex)", self.ed_addr)
+        self.chk_sim = QtWidgets.QCheckBox("Usar o simulador (sem rádio)")
+        self.chk_sim.setChecked(self.settings.simulator)
+        form.addRow("", self.chk_sim)
+        lay.addWidget(radio_box)
+
+        audio_box = QtWidgets.QGroupBox("Áudio")
+        af = QtWidgets.QFormLayout(audio_box)
+        self.cb_audio = QtWidgets.QComboBox()
+        self.cb_audio.setMinimumWidth(280)
+        af.addRow("Entrada de áudio", self.cb_audio)
+        lay.addWidget(audio_box)
+
+        share_box = QtWidgets.QGroupBox("Compartilhar o rádio com outros programas")
+        sv = QtWidgets.QVBoxLayout(share_box)
+        self.chk_rigctl = QtWidgets.QCheckBox(f"Servidor rigctl (Hamlib NET rigctl) em 127.0.0.1:{self.settings.rigctl_port}")
+        self.chk_rigctl.setToolTip("Permite que WSJT-X, JS8Call, Fldigi, Pat etc. usem este app como rádio")
+        self.chk_rigctl.setChecked(self.settings.rigctl_enabled)
+        sv.addWidget(self.chk_rigctl)
+        note = QtWidgets.QLabel("Com ele ligado, os outros programas escolhem “Hamlib NET rigctl” e esse endereço, sem abrir a porta COM do rádio.")
+        note.setWordWrap(True)
+        note.setStyleSheet("color:#9aa7b6")
+        sv.addWidget(note)
+        lay.addWidget(share_box)
+
+        exit_box = QtWidgets.QGroupBox("Ao desconectar")
+        ev = QtWidgets.QVBoxLayout(exit_box)
+        self.chk_restore = QtWidgets.QCheckBox("Restaurar frequência e modo ao sair")
+        self.chk_restore.setToolTip("O rádio volta para a frequência, o modo, o DATA e o filtro de quando o app conectou.")
+        self.chk_restore.setChecked(self.settings.restore_on_exit)
+        self.chk_restore.toggled.connect(self._restore_toggled)
+        ev.addWidget(self.chk_restore)
+        ev.addWidget(QtWidgets.QLabel("A tela do scope do rádio sempre volta ao que estava."))
+        lay.addWidget(exit_box)
+
+        data_box = QtWidgets.QGroupBox("Dados do app")
+        dv = QtWidgets.QHBoxLayout(data_box)
+        from ..settings import app_dir
+
+        dv.addWidget(QtWidgets.QLabel(str(app_dir())), 1)
+        btn_folder = QtWidgets.QPushButton("Abrir pasta")
+        btn_folder.clicked.connect(self._open_data_folder)
+        dv.addWidget(btn_folder)
+        lay.addWidget(data_box)
+        lay.addStretch()
+        return page
 
     def _meter(self, name: str, maximum: int) -> QtWidgets.QProgressBar:
         bar = QtWidgets.QProgressBar()
@@ -617,6 +777,10 @@ class MainWindow(QtWidgets.QMainWindow):
 
     # ---------------------------------------------------------------- wiring
     def _wire(self) -> None:
+        self.btn_home.clicked.connect(lambda: self.show_page("radio"))
+        self.btn_apps.clicked.connect(lambda: self.show_page("apps"))
+        self.menu.open_page.connect(self.show_page)
+        self.btn_panic.clicked.connect(self._panic)
         self.btn_connect.clicked.connect(self._toggle_connect)
         self.chk_rigctl.toggled.connect(self._toggle_rigctl)
         if self.chk_rigctl.isChecked():
@@ -765,6 +929,7 @@ class MainWindow(QtWidgets.QMainWindow):
     # ---------------------------------------------------------------- eventos
     def _on_state(self, st: RadioState) -> None:
         self.state = st
+        self._update_header(st)
         self.freq_disp.set_freq(st.freq)
         self.spectrum.set_freq(st.freq)
         if st.connected:

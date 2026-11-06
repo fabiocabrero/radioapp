@@ -1,0 +1,425 @@
+{
+ "_fonte": "IARU Region 2 Band Plan (2020); ARRL Band Plan; 47 CFR 97.309. Larguras de banda são valores típicos. Centros de atividade são voluntários.",
+ "protocols": [
+  {
+   "key": "cw",
+   "name": "CW (telegrafia)",
+   "category": "Telegrafia",
+   "iaru": "CW",
+   "bw": "100 a 500 Hz",
+   "app": "native",
+   "page": "cw",
+   "summary": "Código Morse; permitido em toda a banda, de preferência fora de segmentos de balizas e repetidoras (IARU).",
+   "recognition": "IARU: CW em todas as faixas. FCC § 97.305(a): CW em qualquer frequência autorizada."
+  },
+  {
+   "key": "rtty",
+   "name": "RTTY (Baudot)",
+   "category": "Texto",
+   "iaru": "DM",
+   "bw": "≈ 250 Hz",
+   "app": "native",
+   "page": "rtty",
+   "summary": "Teletipo em AFSK: 45,45 baud, 170 Hz de shift, código Baudot (ITA2).",
+   "where": "ARRL: 'RTTY/Data' em 80 m 3,570-3,600 e 40 m 7,080-7,125; RTTY em 30 m 10,130-10,140, 20 m 14,070-14,095, 17 m 18,100-18,105, 15 m 21,070-21,110, 12 m 24,920-24,925 e 10 m 28,070-28,150 MHz.",
+   "recognition": "IARU: modo digital (DM). Código especificado na FCC § 97.309(a)(1): Baudot."
+  },
+  {
+   "key": "psk31",
+   "name": "PSK31 e família PSK",
+   "category": "Texto",
+   "iaru": "DM",
+   "bw": "≈ 31 Hz (PSK31)",
+   "app": "external",
+   "ext": "fldigi",
+   "summary": "Teclado a teclado em fase (BPSK/QPSK), muito estreito. Use o Fldigi.",
+   "where": "Dentro dos segmentos de modos digitais (DM); 14,070 MHz é a frequência tradicional de PSK31.",
+   "recognition": "IARU: modo digital (DM). Para códigos não especificados vale a regra de documentação pública (FCC § 97.309): consulte a regulamentação do seu país para modos cuja modulação não é publicada."
+  },
+  {
+   "key": "olivia",
+   "name": "Olivia, MT63, Contestia, THOR",
+   "category": "Texto",
+   "iaru": "DM",
+   "bw": "250 Hz a 2 kHz",
+   "app": "external",
+   "ext": "fldigi",
+   "summary": "Modos robustos com correção de erros para texto com sinais muito fracos. Disponíveis no Fldigi.",
+   "recognition": "IARU: modo digital (DM). Para códigos não especificados vale a regra de documentação pública (FCC § 97.309): consulte a regulamentação do seu país para modos cuja modulação não é publicada."
+  },
+  {
+   "key": "ft8",
+   "name": "FT8",
+   "category": "Sinais fracos",
+   "iaru": "DM",
+   "bw": "50 Hz",
+   "app": "native",
+   "page": "ft8",
+   "summary": "Ciclos de 15 s, mensagens fixas de 77 bits; o modo digital mais ativo em HF.",
+   "where": "Frequências de chamada na tabela de Frequências digitais (por exemplo 14,074 MHz).",
+   "recognition": "IARU: modo digital (DM). Para códigos não especificados vale a regra de documentação pública (FCC § 97.309): consulte a regulamentação do seu país para modos cuja modulação não é publicada. A IARU revisou os planos de HF por causa do volume de FT8."
+  },
+  {
+   "key": "ft4",
+   "name": "FT4",
+   "category": "Sinais fracos",
+   "iaru": "DM",
+   "bw": "83 Hz",
+   "app": "native",
+   "page": "ft8",
+   "summary": "Como o FT8, em ciclos de 7,5 s, para concursos.",
+   "recognition": "IARU: modo digital (DM). Para códigos não especificados vale a regra de documentação pública (FCC § 97.309): consulte a regulamentação do seu país para modos cuja modulação não é publicada."
+  },
+  {
+   "key": "wsjt",
+   "name": "FST4, Q65, JT65, JT9",
+   "category": "Sinais fracos",
+   "iaru": "DM",
+   "bw": "10 a 200 Hz",
+   "app": "engine",
+   "page": "wsjt",
+   "summary": "Modos do WSJT-X para sinais muito fracos (inclusive EME e dispersão). Recepção pelo motor do WSJT-X instalado.",
+   "recognition": "IARU: modo digital (DM). Para códigos não especificados vale a regra de documentação pública (FCC § 97.309): consulte a regulamentação do seu país para modos cuja modulação não é publicada."
+  },
+  {
+   "key": "wspr",
+   "name": "WSPR",
+   "category": "Balizas",
+   "iaru": "DM / ACDS",
+   "bw": "6 Hz",
+   "app": "engine",
+   "page": "wsjt",
+   "summary": "Balizas de 2 minutos para medir propagação; recepção pelo motor do WSJT-X.",
+   "recognition": "IARU: balizas digitais podem ser ACDS onde o segmento indicar; use banda estreita."
+  },
+  {
+   "key": "js8",
+   "name": "JS8 (JS8Call)",
+   "category": "Texto",
+   "iaru": "DM",
+   "bw": "≈ 50 Hz",
+   "app": "external",
+   "ext": "js8call",
+   "summary": "Mensagens e conversas sobre a base do FT8, com retransmissão por estações intermediárias.",
+   "recognition": "IARU: modo digital (DM). Para códigos não especificados vale a regra de documentação pública (FCC § 97.309): consulte a regulamentação do seu país para modos cuja modulação não é publicada."
+  },
+  {
+   "key": "winlink",
+   "name": "Winlink (e-mail por rádio)",
+   "category": "E-mail por rádio",
+   "iaru": "DM / ACDS",
+   "bw": "500 Hz a 2,75 kHz",
+   "app": "external",
+   "ext": "winlink_express",
+   "summary": "Rede de e-mail por rádio. Os modems são ARDOP (aberto), VARA (proprietário), PACTOR (proprietário, com hardware) e Packet. Gateways automáticos operam nos segmentos ACDS.",
+   "where": "Segmentos ACDS do plano IARU R2: 80 m 3,590-3,600; 40 m 7,047-7,053; 30 m 10,130-10,140; 20 m 14,089-14,112; 17 m 18,105-18,120; 15 m 21,090-21,120; 12 m 24,925-24,940; 10 m 28,120-28,150 MHz.",
+   "recognition": "IARU: ACDS só onde o segmento indica; operação sem operador é restrita em HF. Técnica documentada publicamente, citada na FCC § 97.309(a)(4) (CLOVER, G-TOR, PACTOR)."
+  },
+  {
+   "key": "ardop",
+   "name": "ARDOP",
+   "category": "E-mail por rádio",
+   "iaru": "DM / ACDS",
+   "bw": "200 a 2000 Hz",
+   "app": "external",
+   "ext": "ardopcf",
+   "summary": "Modem ARQ aberto, usado pelo Pat e pelo Winlink Express. Alternativa livre ao VARA.",
+   "recognition": "IARU: DM/ACDS. Para códigos não especificados vale a regra de documentação pública (FCC § 97.309): consulte a regulamentação do seu país para modos cuja modulação não é publicada."
+  },
+  {
+   "key": "vara",
+   "name": "VARA HF",
+   "category": "E-mail por rádio",
+   "iaru": "DM / ACDS",
+   "bw": "500 Hz a 2,75 kHz",
+   "app": "external",
+   "ext": "vara_hf",
+   "summary": "Modem proprietário (EA5HVK) de alta velocidade; só existe como programa próprio, não dá para embutir.",
+   "recognition": "IARU: DM/ACDS. Para códigos não especificados vale a regra de documentação pública (FCC § 97.309): consulte a regulamentação do seu país para modos cuja modulação não é publicada."
+  },
+  {
+   "key": "varac",
+   "name": "VarAC",
+   "category": "E-mail por rádio",
+   "iaru": "DM",
+   "bw": "a do VARA HF",
+   "app": "external",
+   "ext": "varac",
+   "summary": "Chat e mensagens curtas sobre o VARA HF.",
+   "recognition": "Depende do VARA. Para códigos não especificados vale a regra de documentação pública (FCC § 97.309): consulte a regulamentação do seu país para modos cuja modulação não é publicada."
+  },
+  {
+   "key": "pactor",
+   "name": "PACTOR",
+   "category": "E-mail por rádio",
+   "iaru": "DM / ACDS",
+   "bw": "500 Hz a 2,4 kHz",
+   "app": "none",
+   "summary": "Modem com hardware proprietário, citado na regra da FCC; usado em Winlink e marítimo. Sem suporte neste app.",
+   "recognition": "Técnica documentada publicamente, citada na FCC § 97.309(a)(4)."
+  },
+  {
+   "key": "packet",
+   "name": "Packet (AX.25)",
+   "category": "Pacote",
+   "iaru": "DM",
+   "bw": "≈ 500 Hz (300 baud HF)",
+   "app": "none",
+   "summary": "Pacotes AX.25 a 300 baud em HF e 1200 baud em VHF. Sem suporte neste app (use o Pat/Dire Wolf).",
+   "where": "ARRL: packet em 30 m 10,140-10,150, 20 m 14,095-14,0995 e 14,1005-14,112, 17 m 18,105-18,110 e 12 m 24,925-24,930 MHz; 6 m 50,62 (chamada).",
+   "recognition": "IARU: DM. Código especificado na FCC § 97.309(a)(3): ASCII."
+  },
+  {
+   "key": "sstv",
+   "name": "SSTV e imagem",
+   "category": "Imagem",
+   "iaru": "Imagem",
+   "bw": "≈ 2,7 kHz",
+   "app": "native",
+   "page": "sstv",
+   "summary": "Televisão de varredura lenta (Martin, Scottie e outros) e fax; IARU define centros de atividade de imagem.",
+   "where": "Centros de atividade de imagem (IARU R2): 3,735; 3,845; 7,165; 14,230; 21,340 e 28,680 MHz.",
+   "recognition": "IARU: modos de imagem (SSTV e FAX) em qualquer segmento que admita a largura de banda."
+  },
+  {
+   "key": "dv",
+   "name": "Voz digital (FreeDV)",
+   "category": "Voz digital",
+   "iaru": "DV",
+   "bw": "≈ 1 kHz",
+   "app": "external",
+   "ext": "freedv",
+   "summary": "Voz codificada digitalmente em HF; os dados embutidos devem ser acessórios. O FreeDV é aberto.",
+   "where": "Centros de voz digital (IARU R2): 7,070 e 28,330 MHz.",
+   "recognition": "IARU: DV deve verificar se o canal está em uso, inclusive por modos analógicos."
+  },
+  {
+   "key": "ibp",
+   "name": "Balizas internacionais (IBP)",
+   "category": "Balizas",
+   "iaru": "IBP",
+   "bw": "CW",
+   "app": "none",
+   "summary": "Rede mundial de balizas da IARU, uma frequência por banda, em segmentos exclusivos; sem transmitir nelas.",
+   "where": "14,100; 18,110; 21,150; 24,930 e 28,200 MHz (segmentos de 2 kHz exclusivos).",
+   "recognition": "IARU: IBP exclusivo; use só para receber."
+  }
+ ],
+ "centers": [
+  {
+   "kind": "Emergência",
+   "label": "3750 kHz",
+   "khz": 3750
+  },
+  {
+   "kind": "Emergência",
+   "label": "3985 kHz",
+   "khz": 3985
+  },
+  {
+   "kind": "Emergência",
+   "label": "7060 kHz",
+   "khz": 7060
+  },
+  {
+   "kind": "Emergência",
+   "label": "7240 kHz",
+   "khz": 7240
+  },
+  {
+   "kind": "Emergência",
+   "label": "7275 kHz",
+   "khz": 7275
+  },
+  {
+   "kind": "Emergência",
+   "label": "14300 kHz",
+   "khz": 14300
+  },
+  {
+   "kind": "Emergência",
+   "label": "18160 kHz",
+   "khz": 18160
+  },
+  {
+   "kind": "Emergência",
+   "label": "21360 kHz",
+   "khz": 21360
+  },
+  {
+   "kind": "Imagem (SSTV/FAX)",
+   "label": "3735 kHz",
+   "khz": 3735
+  },
+  {
+   "kind": "Imagem (SSTV/FAX)",
+   "label": "3845 kHz",
+   "khz": 3845
+  },
+  {
+   "kind": "Imagem (SSTV/FAX)",
+   "label": "7165 kHz",
+   "khz": 7165
+  },
+  {
+   "kind": "Imagem (SSTV/FAX)",
+   "label": "14230 kHz",
+   "khz": 14230
+  },
+  {
+   "kind": "Imagem (SSTV/FAX)",
+   "label": "21340 kHz",
+   "khz": 21340
+  },
+  {
+   "kind": "Imagem (SSTV/FAX)",
+   "label": "28680 kHz",
+   "khz": 28680
+  },
+  {
+   "kind": "Voz digital",
+   "label": "7070 kHz",
+   "khz": 7070
+  },
+  {
+   "kind": "Voz digital",
+   "label": "28330 kHz",
+   "khz": 28330
+  },
+  {
+   "kind": "CW QRP",
+   "label": "1812 kHz",
+   "khz": 1812
+  },
+  {
+   "kind": "CW QRP",
+   "label": "3560 kHz",
+   "khz": 3560
+  },
+  {
+   "kind": "CW QRP",
+   "label": "7030 kHz",
+   "khz": 7030
+  },
+  {
+   "kind": "CW QRP",
+   "label": "10116 kHz",
+   "khz": 10116
+  },
+  {
+   "kind": "CW QRP",
+   "label": "14060 kHz",
+   "khz": 14060
+  },
+  {
+   "kind": "CW QRP",
+   "label": "18086 kHz",
+   "khz": 18086
+  },
+  {
+   "kind": "CW QRP",
+   "label": "21060 kHz",
+   "khz": 21060
+  },
+  {
+   "kind": "CW QRP",
+   "label": "24906 kHz",
+   "khz": 24906
+  },
+  {
+   "kind": "CW QRP",
+   "label": "28060 kHz",
+   "khz": 28060
+  },
+  {
+   "kind": "CW QRS",
+   "label": "3555 kHz",
+   "khz": 3555
+  },
+  {
+   "kind": "CW QRS",
+   "label": "14055 kHz",
+   "khz": 14055
+  },
+  {
+   "kind": "CW QRS",
+   "label": "28055 kHz",
+   "khz": 28055
+  },
+  {
+   "kind": "SSB QRP",
+   "label": "1910 kHz",
+   "khz": 1910
+  },
+  {
+   "kind": "SSB QRP",
+   "label": "3690 kHz",
+   "khz": 3690
+  },
+  {
+   "kind": "SSB QRP",
+   "label": "7090 kHz",
+   "khz": 7090
+  },
+  {
+   "kind": "SSB QRP",
+   "label": "7285 kHz",
+   "khz": 7285
+  },
+  {
+   "kind": "SSB QRP",
+   "label": "14285 kHz",
+   "khz": 14285
+  },
+  {
+   "kind": "SSB QRP",
+   "label": "18130 kHz",
+   "khz": 18130
+  },
+  {
+   "kind": "SSB QRP",
+   "label": "21285 kHz",
+   "khz": 21285
+  },
+  {
+   "kind": "SSB QRP",
+   "label": "24950 kHz",
+   "khz": 24950
+  },
+  {
+   "kind": "SSB QRP",
+   "label": "28360 kHz",
+   "khz": 28360
+  },
+  {
+   "kind": "AM",
+   "label": "3885 kHz",
+   "khz": 3885
+  },
+  {
+   "kind": "AM",
+   "label": "7290 kHz",
+   "khz": 7290
+  },
+  {
+   "kind": "AM",
+   "label": "14285 kHz",
+   "khz": 14285
+  },
+  {
+   "kind": "FM chamada",
+   "label": "29600 kHz",
+   "khz": 29600
+  },
+  {
+   "kind": "6 m",
+   "label": "chamada DX 50110 kHz (exclusiva)",
+   "khz": 50110
+  },
+  {
+   "kind": "6 m",
+   "label": "centro PSK 50305 kHz",
+   "khz": 50305
+  }
+ ]
+}

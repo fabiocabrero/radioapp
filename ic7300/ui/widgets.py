@@ -42,6 +42,16 @@ class FrequencyDisplay(QtWidgets.QLabel):
                 pass
 
 
+class MHzAxis(pg.AxisItem):
+    """Eixo de frequência: MHz com 3 casas no espectro do rádio, Hz no espectro do áudio."""
+    hz_mode = False
+
+    def tickStrings(self, values, scale, spacing):
+        if self.hz_mode:
+            return [f"{v:.0f}" for v in values]
+        return [f"{v / 1e6:.3f}" for v in values]
+
+
 class SpectrumView(pg.GraphicsLayoutWidget):
     """Espectro + faixa do plano de bandas + waterfall. Clique sintoniza."""
     clicked_freq = QtCore.Signal(int)
@@ -63,6 +73,7 @@ class SpectrumView(pg.GraphicsLayoutWidget):
         self.p_spec.hideButtons()
         self.p_spec.setMouseEnabled(False, False)
         self.p_spec.showGrid(x=True, y=True, alpha=0.15)
+        self.p_spec.hideAxis("bottom")
         self.p_spec.setYRange(0, 160, padding=0)
         self.curve = self.p_spec.plot(pen=pg.mkPen("#ffd54a", width=1))
         self.curve.setFillLevel(0)
@@ -80,7 +91,7 @@ class SpectrumView(pg.GraphicsLayoutWidget):
         self.p_band.setMaximumHeight(34)
         self.p_band.setXLink(self.p_spec)
 
-        self.p_wf = self.addPlot(row=2, col=0)
+        self.p_wf = self.addPlot(row=2, col=0, axisItems={"bottom": MHzAxis("bottom")})
         self.p_wf.setMenuEnabled(False)
         self.p_wf.hideButtons()
         self.p_wf.setMouseEnabled(False, False)
@@ -111,10 +122,10 @@ class SpectrumView(pg.GraphicsLayoutWidget):
         self.img.setRect(QtCore.QRectF(low, 0, high - low, self.WF_ROWS))
         self.p_wf.setYRange(0, self.WF_ROWS, padding=0)
         self._draw_bandplan()
-        axis = self.p_spec.getAxis("bottom")
+        axis = self.p_wf.getAxis("bottom")
+        axis.hz_mode = self.audio_mode
         axis.setTickSpacing(*self._tick_spacing(high - low))
-        axis.setLabel("MHz" if not self.audio_mode else "Hz")
-        axis.setScale(1e-6 if not self.audio_mode else 1.0)
+        axis.setLabel("Hz" if self.audio_mode else "MHz")
 
     @staticmethod
     def _tick_spacing(span: float) -> tuple[float, float]:

@@ -1104,9 +1104,8 @@
    ]
   },
   "IARU-R2": {
-   "name": "IARU Região 2 (Américas)",
+   "name": "IARU Região 2 (plano oficial, 2020)",
    "region": 2,
-   "source": "Alocações da UIT por região e uso típico da IARU (genérico, sem classes nem potências)",
    "generic": true,
    "bands": [
     {
@@ -1116,24 +1115,82 @@
      "segments": [
       {
        "start": 1800000,
-       "stop": 1840000,
+       "stop": 1810000,
+       "use": "DIG",
+       "modes": [
+        "DIG"
+       ],
+       "classes": "",
+       "note": "Largura máx. 500 Hz"
+      },
+      {
+       "start": 1810000,
+       "stop": 1830000,
        "use": "CW",
-       "modes": [],
-       "classes": ""
+       "modes": [
+        "CW"
+       ],
+       "classes": "",
+       "note": "Largura máx. 200 Hz. CW QRP, centro 1812"
+      },
+      {
+       "start": 1830000,
+       "stop": 1839000,
+       "use": "CW",
+       "modes": [
+        "CW"
+       ],
+       "classes": "",
+       "note": "Largura máx. 200 Hz. Janela de DX"
+      },
+      {
+       "start": 1839000,
+       "stop": 1840000,
+       "use": "DIG",
+       "modes": [
+        "CW",
+        "DIG"
+       ],
+       "classes": "",
+       "note": "Largura máx. 200 Hz. Janela de DX; ACDS"
       },
       {
        "start": 1840000,
+       "stop": 1843000,
+       "use": "SSB",
+       "modes": [
+        "CW",
+        "SSB",
+        "DIG"
+       ],
+       "classes": "",
+       "note": "Largura máx. 2700 Hz. Janela de DX; digital só até 200 Hz de largura"
+      },
+      {
+       "start": 1843000,
        "stop": 1850000,
-       "use": "DIG",
-       "modes": [],
-       "classes": ""
+       "use": "SSB",
+       "modes": [
+        "CW",
+        "SSB"
+       ],
+       "classes": "",
+       "note": "Largura máx. 2700 Hz. Janela de DX"
       },
       {
        "start": 1850000,
        "stop": 2000000,
-       "use": "SSB",
-       "modes": [],
-       "classes": ""
+       "use": "ALL",
+       "modes": [
+        "CW",
+        "DIG",
+        "SSB",
+        "DV",
+        "OUT",
+        "AM"
+       ],
+       "classes": "",
+       "note": "Largura máx. 2700 Hz. Centro QRP SSB 1910. AM de até 6 kHz permitida"
       }
      ]
     },
@@ -1144,38 +1201,223 @@
      "segments": [
       {
        "start": 3500000,
+       "stop": 3510000,
+       "use": "CW",
+       "modes": [
+        "CW"
+       ],
+       "classes": "",
+       "note": "Largura máx. 200 Hz. Janela de DX"
+      },
+      {
+       "start": 3510000,
+       "stop": 3560000,
+       "use": "CW",
+       "modes": [
+        "CW"
+       ],
+       "classes": "",
+       "note": "Largura máx. 200 Hz. CW QRS, centro 3555; preferência de concurso CW"
+      },
+      {
+       "start": 3560000,
        "stop": 3570000,
        "use": "CW",
-       "modes": [],
-       "classes": ""
+       "modes": [
+        "CW"
+       ],
+       "classes": "",
+       "note": "Largura máx. 200 Hz. CW QRP, centro 3560"
       },
       {
        "start": 3570000,
+       "stop": 3580000,
+       "use": "DIG",
+       "modes": [
+        "CW",
+        "DIG"
+       ],
+       "classes": "",
+       "note": "Largura máx. 200 Hz"
+      },
+      {
+       "start": 3580000,
+       "stop": 3590000,
+       "use": "DIG",
+       "modes": [
+        "CW",
+        "DIG"
+       ],
+       "classes": "",
+       "note": "Largura máx. 500 Hz"
+      },
+      {
+       "start": 3590000,
        "stop": 3600000,
        "use": "DIG",
-       "modes": [],
-       "classes": ""
+       "modes": [
+        "CW",
+        "DIG"
+       ],
+       "classes": "",
+       "note": "Largura máx. 500 Hz. ACDS"
       },
       {
        "start": 3600000,
+       "stop": 3625000,
+       "use": "ALL",
+       "modes": [
+        "CW",
+        "DIG",
+        "SSB",
+        "DV",
+        "OUT",
+        "AM"
+       ],
+       "classes": "",
+       "note": "Largura máx. 2700 Hz. ACDS. AM de até 6 kHz permitida"
+      },
+      {
+       "start": 3625000,
+       "stop": 3650000,
+       "use": "ALL",
+       "modes": [
+        "CW",
+        "DIG",
+        "SSB",
+        "DV",
+        "OUT"
+       ],
+       "classes": "",
+       "note": "Largura máx. 2700 Hz. Preferência de concurso SSB"
+      },
+      {
+       "start": 3650000,
+       "stop": 3700000,
+       "use": "ALL",
+       "modes": [
+        "CW",
+        "DIG",
+        "SSB",
+        "DV",
+        "OUT"
+       ],
+       "classes": "",
+       "note": "Largura máx. 2700 Hz. Centro QRP 3690"
+      },
+      {
+       "start": 3700000,
+       "stop": 3775000,
+       "use": "ALL",
+       "modes": [
+        "CW",
+        "DIG",
+        "SSB",
+        "DV",
+        "OUT"
+       ],
+       "classes": "",
+       "note": "Largura máx. 2700 Hz. Concurso SSB; centro de imagem 3735; centro de emergência 3750"
+      },
+      {
+       "start": 3775000,
+       "stop": 3800000,
+       "use": "ALL",
+       "modes": [
+        "CW",
+        "DIG",
+        "SSB",
+        "DV",
+        "OUT"
+       ],
+       "classes": "",
+       "note": "Largura máx. 2700 Hz. Janela de DX"
+      },
+      {
+       "start": 3800000,
+       "stop": 3875000,
+       "use": "ALL",
+       "modes": [
+        "CW",
+        "DIG",
+        "SSB",
+        "DV",
+        "OUT"
+       ],
+       "classes": "",
+       "note": "Largura máx. 2700 Hz"
+      },
+      {
+       "start": 3875000,
+       "stop": 3900000,
+       "use": "ALL",
+       "modes": [
+        "CW",
+        "DIG",
+        "SSB",
+        "DV",
+        "OUT",
+        "AM"
+       ],
+       "classes": "",
+       "note": "Largura máx. 2700 Hz. Centro de imagem 3845; centro AM 3885. AM de até 6 kHz permitida"
+      },
+      {
+       "start": 3900000,
        "stop": 4000000,
-       "use": "SSB",
-       "modes": [],
-       "classes": ""
+       "use": "ALL",
+       "modes": [
+        "CW",
+        "DIG",
+        "SSB",
+        "DV",
+        "OUT"
+       ],
+       "classes": "",
+       "note": "Largura máx. 2700 Hz. Centro de emergência 3985"
       }
      ]
     },
     {
      "name": "60m",
-     "start": 5351500.0,
-     "stop": 5366500.0,
+     "start": 5351500,
+     "stop": 5366500,
      "segments": [
       {
-       "start": 5351500.0,
-       "stop": 5366500.0,
+       "start": 5351500,
+       "stop": 5354000,
+       "use": "DIG",
+       "modes": [
+        "CW",
+        "DIG"
+       ],
+       "classes": "",
+       "note": "Largura máx. 500 Hz"
+      },
+      {
+       "start": 5354000,
+       "stop": 5366000,
        "use": "ALL",
-       "modes": [],
-       "classes": ""
+       "modes": [
+        "CW",
+        "DIG",
+        "SSB",
+        "DV",
+        "OUT"
+       ],
+       "classes": "",
+       "note": "Largura máx. 2700 Hz"
+      },
+      {
+       "start": 5366000,
+       "stop": 5366500,
+       "use": "DIG",
+       "modes": [
+        "CW",
+        "DIG"
+       ],
+       "classes": "",
+       "note": "Largura máx. 20 Hz. ACDS"
       }
      ]
     },
@@ -1186,24 +1428,132 @@
      "segments": [
       {
        "start": 7000000,
+       "stop": 7025000,
+       "use": "CW",
+       "modes": [
+        "CW"
+       ],
+       "classes": "",
+       "note": "Largura máx. 200 Hz. Janela de DX"
+      },
+      {
+       "start": 7025000,
        "stop": 7040000,
        "use": "CW",
-       "modes": [],
-       "classes": ""
+       "modes": [
+        "CW"
+       ],
+       "classes": "",
+       "note": "Largura máx. 200 Hz. CW QRP, centro 7030"
       },
       {
        "start": 7040000,
-       "stop": 7080000,
+       "stop": 7047000,
        "use": "DIG",
-       "modes": [],
-       "classes": ""
+       "modes": [
+        "CW",
+        "DIG"
+       ],
+       "classes": "",
+       "note": "Largura máx. 500 Hz"
       },
       {
-       "start": 7080000,
+       "start": 7047000,
+       "stop": 7050000,
+       "use": "DIG",
+       "modes": [
+        "CW",
+        "DIG"
+       ],
+       "classes": "",
+       "note": "Largura máx. 500 Hz. ACDS"
+      },
+      {
+       "start": 7050000,
+       "stop": 7053000,
+       "use": "ALL",
+       "modes": [
+        "CW",
+        "DIG",
+        "SSB",
+        "DV",
+        "OUT"
+       ],
+       "classes": "",
+       "note": "Largura máx. 2700 Hz. ACDS"
+      },
+      {
+       "start": 7053000,
+       "stop": 7060000,
+       "use": "ALL",
+       "modes": [
+        "CW",
+        "DIG",
+        "SSB",
+        "DV",
+        "OUT"
+       ],
+       "classes": "",
+       "note": "Largura máx. 2700 Hz. Centro de emergência R2 7060"
+      },
+      {
+       "start": 7060000,
+       "stop": 7100000,
+       "use": "ALL",
+       "modes": [
+        "CW",
+        "DIG",
+        "SSB",
+        "DV",
+        "OUT"
+       ],
+       "classes": "",
+       "note": "Largura máx. 2700 Hz. Centro de voz digital 7070; SSB QRP 7090; concurso SSB"
+      },
+      {
+       "start": 7100000,
+       "stop": 7130000,
+       "use": "ALL",
+       "modes": [
+        "CW",
+        "DIG",
+        "SSB",
+        "DV",
+        "OUT",
+        "AM"
+       ],
+       "classes": "",
+       "note": "Largura máx. 2700 Hz. AM de até 6 kHz permitida"
+      },
+      {
+       "start": 7130000,
+       "stop": 7200000,
+       "use": "ALL",
+       "modes": [
+        "CW",
+        "DIG",
+        "SSB",
+        "DV",
+        "OUT",
+        "AM"
+       ],
+       "classes": "",
+       "note": "Largura máx. 2700 Hz. Concurso SSB; centro de imagem 7165. AM de até 6 kHz permitida"
+      },
+      {
+       "start": 7200000,
        "stop": 7300000,
-       "use": "SSB",
-       "modes": [],
-       "classes": ""
+       "use": "ALL",
+       "modes": [
+        "CW",
+        "DIG",
+        "SSB",
+        "DV",
+        "OUT",
+        "AM"
+       ],
+       "classes": "",
+       "note": "Largura máx. 2700 Hz. Emergência 7240 e 7275; SSB QRP 7285; centro AM 7290. AM de até 6 kHz permitida"
       }
      ]
     },
@@ -1216,15 +1566,33 @@
        "start": 10100000,
        "stop": 10130000,
        "use": "CW",
-       "modes": [],
-       "classes": ""
+       "modes": [
+        "CW"
+       ],
+       "classes": "",
+       "note": "Largura máx. 200 Hz. CW QRP, centro 10116"
       },
       {
        "start": 10130000,
+       "stop": 10140000,
+       "use": "DIG",
+       "modes": [
+        "CW",
+        "DIG"
+       ],
+       "classes": "",
+       "note": "Largura máx. 500 Hz. ACDS"
+      },
+      {
+       "start": 10140000,
        "stop": 10150000,
        "use": "DIG",
-       "modes": [],
-       "classes": ""
+       "modes": [
+        "CW",
+        "DIG"
+       ],
+       "classes": "",
+       "note": "Largura máx. 2700 Hz"
       }
      ]
     },
@@ -1235,31 +1603,150 @@
      "segments": [
       {
        "start": 14000000,
+       "stop": 14025000,
+       "use": "CW",
+       "modes": [
+        "CW"
+       ],
+       "classes": "",
+       "note": "Largura máx. 200 Hz. Janela de DX"
+      },
+      {
+       "start": 14025000,
+       "stop": 14060000,
+       "use": "CW",
+       "modes": [
+        "CW"
+       ],
+       "classes": "",
+       "note": "Largura máx. 200 Hz. Concurso CW; CW QRS, centro 14055"
+      },
+      {
+       "start": 14060000,
        "stop": 14070000,
        "use": "CW",
-       "modes": [],
-       "classes": ""
+       "modes": [
+        "CW"
+       ],
+       "classes": "",
+       "note": "Largura máx. 200 Hz. CW QRP, centro 14060"
       },
       {
        "start": 14070000,
-       "stop": 14100000,
+       "stop": 14089000,
        "use": "DIG",
-       "modes": [],
-       "classes": ""
+       "modes": [
+        "CW",
+        "DIG"
+       ],
+       "classes": "",
+       "note": "Largura máx. 500 Hz"
       },
       {
-       "start": 14100000,
+       "start": 14089000,
+       "stop": 14099000,
+       "use": "DIG",
+       "modes": [
+        "CW",
+        "DIG"
+       ],
+       "classes": "",
+       "note": "Largura máx. 500 Hz. ACDS"
+      },
+      {
+       "start": 14099000,
        "stop": 14101000,
        "use": "BCN",
-       "modes": [],
-       "classes": ""
+       "modes": [
+        "BCN"
+       ],
+       "classes": "",
+       "note": "Largura máx. 200 Hz. IBP: balizas internacionais (exclusivo)"
       },
       {
        "start": 14101000,
+       "stop": 14112000,
+       "use": "ALL",
+       "modes": [
+        "CW",
+        "DIG",
+        "SSB",
+        "DV",
+        "OUT"
+       ],
+       "classes": "",
+       "note": "Largura máx. 2700 Hz. ACDS"
+      },
+      {
+       "start": 14112000,
+       "stop": 14190000,
+       "use": "ALL",
+       "modes": [
+        "CW",
+        "DIG",
+        "SSB",
+        "DV",
+        "OUT"
+       ],
+       "classes": "",
+       "note": "Largura máx. 2700 Hz. Concurso SSB"
+      },
+      {
+       "start": 14190000,
+       "stop": 14200000,
+       "use": "ALL",
+       "modes": [
+        "CW",
+        "DIG",
+        "SSB",
+        "DV",
+        "OUT"
+       ],
+       "classes": "",
+       "note": "Largura máx. 2700 Hz. Janela de DX; concurso SSB"
+      },
+      {
+       "start": 14200000,
+       "stop": 14285000,
+       "use": "ALL",
+       "modes": [
+        "CW",
+        "DIG",
+        "SSB",
+        "DV",
+        "OUT"
+       ],
+       "classes": "",
+       "note": "Largura máx. 2700 Hz. Concurso SSB; centro de imagem 14230; SSB QRP 14285"
+      },
+      {
+       "start": 14285000,
+       "stop": 14300000,
+       "use": "ALL",
+       "modes": [
+        "CW",
+        "DIG",
+        "SSB",
+        "DV",
+        "OUT",
+        "AM"
+       ],
+       "classes": "",
+       "note": "Largura máx. 2700 Hz. Chamada AM 14285. AM de até 6 kHz permitida"
+      },
+      {
+       "start": 14300000,
        "stop": 14350000,
-       "use": "SSB",
-       "modes": [],
-       "classes": ""
+       "use": "ALL",
+       "modes": [
+        "CW",
+        "DIG",
+        "SSB",
+        "DV",
+        "OUT"
+       ],
+       "classes": "",
+       "note": "Largura máx. 2700 Hz. Centro de emergência global 14300"
       }
      ]
     },
@@ -1272,22 +1759,71 @@
        "start": 18068000,
        "stop": 18095000,
        "use": "CW",
-       "modes": [],
-       "classes": ""
+       "modes": [
+        "CW"
+       ],
+       "classes": "",
+       "note": "Largura máx. 200 Hz. CW QRP, centro 18086"
       },
       {
        "start": 18095000,
-       "stop": 18110000,
+       "stop": 18105000,
        "use": "DIG",
-       "modes": [],
-       "classes": ""
+       "modes": [
+        "CW",
+        "DIG"
+       ],
+       "classes": "",
+       "note": "Largura máx. 500 Hz"
       },
       {
-       "start": 18110000,
+       "start": 18105000,
+       "stop": 18109000,
+       "use": "DIG",
+       "modes": [
+        "CW",
+        "DIG"
+       ],
+       "classes": "",
+       "note": "Largura máx. 500 Hz. ACDS"
+      },
+      {
+       "start": 18109000,
+       "stop": 18111000,
+       "use": "BCN",
+       "modes": [
+        "BCN"
+       ],
+       "classes": "",
+       "note": "Largura máx. 200 Hz. IBP: balizas internacionais (exclusivo)"
+      },
+      {
+       "start": 18111000,
+       "stop": 18120000,
+       "use": "ALL",
+       "modes": [
+        "CW",
+        "DIG",
+        "SSB",
+        "DV",
+        "OUT"
+       ],
+       "classes": "",
+       "note": "Largura máx. 2700 Hz. ACDS"
+      },
+      {
+       "start": 18120000,
        "stop": 18168000,
-       "use": "SSB",
-       "modes": [],
-       "classes": ""
+       "use": "ALL",
+       "modes": [
+        "CW",
+        "DIG",
+        "SSB",
+        "DV",
+        "OUT"
+       ],
+       "classes": "",
+       "note": "Largura máx. 2700 Hz. QRP 18130; centro de emergência global 18160"
       }
      ]
     },
@@ -1300,22 +1836,97 @@
        "start": 21000000,
        "stop": 21070000,
        "use": "CW",
-       "modes": [],
-       "classes": ""
+       "modes": [
+        "CW"
+       ],
+       "classes": "",
+       "note": "Largura máx. 200 Hz. CW QRP, centro 21060"
       },
       {
        "start": 21070000,
-       "stop": 21150000,
+       "stop": 21090000,
        "use": "DIG",
-       "modes": [],
-       "classes": ""
+       "modes": [
+        "CW",
+        "DIG"
+       ],
+       "classes": "",
+       "note": "Largura máx. 500 Hz"
       },
       {
-       "start": 21150000,
+       "start": 21090000,
+       "stop": 21110000,
+       "use": "DIG",
+       "modes": [
+        "CW",
+        "DIG"
+       ],
+       "classes": "",
+       "note": "Largura máx. 500 Hz. ACDS"
+      },
+      {
+       "start": 21110000,
+       "stop": 21120000,
+       "use": "DIG",
+       "modes": [
+        "CW",
+        "DIG"
+       ],
+       "classes": "",
+       "note": "Largura máx. 2700 Hz. ACDS"
+      },
+      {
+       "start": 21120000,
+       "stop": 21149000,
+       "use": "ALL",
+       "modes": [
+        "CW",
+        "DIG",
+        "SSB",
+        "DV",
+        "OUT"
+       ],
+       "classes": "",
+       "note": "Largura máx. 500 Hz"
+      },
+      {
+       "start": 21149000,
+       "stop": 21151000,
+       "use": "BCN",
+       "modes": [
+        "BCN"
+       ],
+       "classes": "",
+       "note": "Largura máx. 200 Hz. IBP: balizas internacionais (exclusivo)"
+      },
+      {
+       "start": 21151000,
+       "stop": 21380000,
+       "use": "ALL",
+       "modes": [
+        "CW",
+        "DIG",
+        "SSB",
+        "DV",
+        "OUT"
+       ],
+       "classes": "",
+       "note": "Largura máx. 2700 Hz. SSB QRP 21285; imagem 21340; emergência global 21360"
+      },
+      {
+       "start": 21380000,
        "stop": 21450000,
-       "use": "SSB",
-       "modes": [],
-       "classes": ""
+       "use": "ALL",
+       "modes": [
+        "CW",
+        "DIG",
+        "SSB",
+        "DV",
+        "OUT",
+        "AM"
+       ],
+       "classes": "",
+       "note": "Largura máx. 2700 Hz. AM de até 6 kHz permitida"
       }
      ]
     },
@@ -1328,22 +1939,71 @@
        "start": 24890000,
        "stop": 24915000,
        "use": "CW",
-       "modes": [],
-       "classes": ""
+       "modes": [
+        "CW"
+       ],
+       "classes": "",
+       "note": "Largura máx. 200 Hz. CW QRP, centro 24906"
       },
       {
        "start": 24915000,
-       "stop": 24930000,
+       "stop": 24925000,
        "use": "DIG",
-       "modes": [],
-       "classes": ""
+       "modes": [
+        "CW",
+        "DIG"
+       ],
+       "classes": "",
+       "note": "Largura máx. 500 Hz"
       },
       {
-       "start": 24930000,
+       "start": 24925000,
+       "stop": 24929000,
+       "use": "DIG",
+       "modes": [
+        "CW",
+        "DIG"
+       ],
+       "classes": "",
+       "note": "Largura máx. 500 Hz. ACDS"
+      },
+      {
+       "start": 24929000,
+       "stop": 24931000,
+       "use": "BCN",
+       "modes": [
+        "BCN"
+       ],
+       "classes": "",
+       "note": "Largura máx. 200 Hz. IBP: balizas internacionais (exclusivo)"
+      },
+      {
+       "start": 24931000,
+       "stop": 24940000,
+       "use": "ALL",
+       "modes": [
+        "CW",
+        "DIG",
+        "SSB",
+        "DV",
+        "OUT"
+       ],
+       "classes": "",
+       "note": "Largura máx. 2700 Hz. ACDS"
+      },
+      {
+       "start": 24940000,
        "stop": 24990000,
-       "use": "SSB",
-       "modes": [],
-       "classes": ""
+       "use": "ALL",
+       "modes": [
+        "CW",
+        "DIG",
+        "SSB",
+        "DV",
+        "OUT"
+       ],
+       "classes": "",
+       "note": "Largura máx. 2700 Hz. SSB QRP 24950"
       }
      ]
     },
@@ -1356,36 +2016,192 @@
        "start": 28000000,
        "stop": 28070000,
        "use": "CW",
-       "modes": [],
-       "classes": ""
+       "modes": [
+        "CW"
+       ],
+       "classes": "",
+       "note": "Largura máx. 200 Hz. CW QRS 28055; CW QRP 28060"
       },
       {
        "start": 28070000,
+       "stop": 28120000,
+       "use": "DIG",
+       "modes": [
+        "CW",
+        "DIG"
+       ],
+       "classes": "",
+       "note": "Largura máx. 500 Hz"
+      },
+      {
+       "start": 28120000,
+       "stop": 28150000,
+       "use": "DIG",
+       "modes": [
+        "CW",
+        "DIG"
+       ],
+       "classes": "",
+       "note": "Largura máx. 500 Hz. ACDS"
+      },
+      {
+       "start": 28150000,
        "stop": 28190000,
        "use": "DIG",
-       "modes": [],
-       "classes": ""
+       "modes": [
+        "CW",
+        "DIG"
+       ],
+       "classes": "",
+       "note": "Largura máx. 500 Hz"
       },
       {
        "start": 28190000,
-       "stop": 28225000,
+       "stop": 28199000,
+       "use": "CW",
+       "modes": [
+        "CW"
+       ],
+       "classes": "",
+       "note": "Largura máx. 200 Hz. Balizas"
+      },
+      {
+       "start": 28199000,
+       "stop": 28201000,
        "use": "BCN",
-       "modes": [],
-       "classes": ""
+       "modes": [
+        "BCN"
+       ],
+       "classes": "",
+       "note": "Largura máx. 200 Hz. IBP: balizas internacionais (exclusivo)"
+      },
+      {
+       "start": 28201000,
+       "stop": 28225000,
+       "use": "CW",
+       "modes": [
+        "CW"
+       ],
+       "classes": "",
+       "note": "Largura máx. 200 Hz. Balizas"
       },
       {
        "start": 28225000,
+       "stop": 28300000,
+       "use": "ALL",
+       "modes": [
+        "CW",
+        "DIG",
+        "SSB",
+        "DV",
+        "OUT"
+       ],
+       "classes": "",
+       "note": "Largura máx. 2700 Hz. Balizas"
+      },
+      {
+       "start": 28300000,
+       "stop": 28320000,
+       "use": "ALL",
+       "modes": [
+        "CW",
+        "DIG",
+        "SSB",
+        "DV",
+        "OUT"
+       ],
+       "classes": "",
+       "note": "Largura máx. 2700 Hz. ACDS"
+      },
+      {
+       "start": 28320000,
        "stop": 29000000,
-       "use": "SSB",
-       "modes": [],
-       "classes": ""
+       "use": "ALL",
+       "modes": [
+        "CW",
+        "DIG",
+        "SSB",
+        "DV",
+        "OUT"
+       ],
+       "classes": "",
+       "note": "Largura máx. 2700 Hz. Voz digital 28330; SSB QRP 28360; imagem 28680"
       },
       {
        "start": 29000000,
-       "stop": 29700000,
+       "stop": 29200000,
+       "use": "ALL",
+       "modes": [
+        "CW",
+        "DIG",
+        "SSB",
+        "DV",
+        "OUT",
+        "FM"
+       ],
+       "classes": "",
+       "note": "Largura máx. 6000 Hz. AM preferido"
+      },
+      {
+       "start": 29200000,
+       "stop": 29300000,
+       "use": "ALL",
+       "modes": [
+        "CW",
+        "DIG",
+        "SSB",
+        "DV",
+        "OUT",
+        "FM"
+       ],
+       "classes": "",
+       "note": "Largura máx. 6000 Hz. ACDS"
+      },
+      {
+       "start": 29300000,
+       "stop": 29510000,
+       "use": "ALL",
+       "modes": [
+        "CW",
+        "DIG",
+        "SSB",
+        "DV",
+        "OUT",
+        "FM"
+       ],
+       "classes": "",
+       "note": "Largura máx. 6000 Hz. Satélites"
+      },
+      {
+       "start": 29520000,
+       "stop": 29590000,
+       "use": "REP",
+       "modes": [
+        "REP"
+       ],
+       "classes": "",
+       "note": "Largura máx. 6000 Hz. Entradas de repetidoras (exclusivo)"
+      },
+      {
+       "start": 29590000,
+       "stop": 29620000,
        "use": "FM",
-       "modes": [],
-       "classes": ""
+       "modes": [
+        "FM",
+        "DV"
+       ],
+       "classes": "",
+       "note": "Largura máx. 6000 Hz. Chamada FM 29600"
+      },
+      {
+       "start": 29620000,
+       "stop": 29700000,
+       "use": "REP",
+       "modes": [
+        "REP"
+       ],
+       "classes": "",
+       "note": "Largura máx. 6000 Hz. Saídas de repetidoras (exclusivo)"
       }
      ]
     },
@@ -1398,33 +2214,200 @@
        "start": 50000000,
        "stop": 50100000,
        "use": "CW",
-       "modes": [],
-       "classes": ""
+       "modes": [
+        "CW"
+       ],
+       "classes": "",
+       "note": "Largura máx. 500 Hz. Balizas"
       },
       {
        "start": 50100000,
-       "stop": 50300000,
+       "stop": 50125000,
        "use": "SSB",
-       "modes": [],
-       "classes": ""
+       "modes": [
+        "CW",
+        "SSB"
+       ],
+       "classes": "",
+       "note": "Largura máx. 2700 Hz. Janela de DX; chamada 50110 (exclusiva)"
       },
       {
-       "start": 50300000,
+       "start": 50125000,
        "stop": 50400000,
-       "use": "DIG",
-       "modes": [],
-       "classes": ""
+       "use": "SSB",
+       "modes": [
+        "CW",
+        "SSB",
+        "DIG"
+       ],
+       "classes": "",
+       "note": "Largura máx. 2700 Hz. Centro PSK 50305"
       },
       {
        "start": 50400000,
+       "stop": 50500000,
+       "use": "ALL",
+       "modes": [
+        "CW",
+        "DIG",
+        "SSB",
+        "DV",
+        "OUT",
+        "AM"
+       ],
+       "classes": "",
+       "note": "Largura máx. 2700 Hz. Balizas, ACDS (balizas digitais). AM de até 6 kHz permitida"
+      },
+      {
+       "start": 50500000,
+       "stop": 50600000,
+       "use": "ALL",
+       "modes": [
+        "CW",
+        "DIG",
+        "SSB",
+        "DV",
+        "OUT",
+        "AM"
+       ],
+       "classes": "",
+       "note": "Largura máx. 2700 Hz. ACDS. AM de até 6 kHz permitida"
+      },
+      {
+       "start": 50600000,
+       "stop": 50800000,
+       "use": "ALL",
+       "modes": [
+        "CW",
+        "DIG",
+        "SSB",
+        "DV",
+        "OUT",
+        "FM"
+       ],
+       "classes": "",
+       "note": "Largura máx. 12000 Hz. ACDS"
+      },
+      {
+       "start": 50800000,
+       "stop": 51000000,
+       "use": "ALL",
+       "modes": [
+        "CW",
+        "DIG",
+        "SSB",
+        "DV",
+        "OUT",
+        "FM"
+       ],
+       "classes": "",
+       "note": "Largura máx. 12000 Hz. Controle remoto (canais de 20 kHz)"
+      },
+      {
+       "start": 51000000,
+       "stop": 51110000,
+       "use": "SSB",
+       "modes": [
+        "CW",
+        "SSB"
+       ],
+       "classes": "",
+       "note": "Largura máx. 2700 Hz. Janela de DX"
+      },
+      {
+       "start": 51110000,
+       "stop": 51480000,
+       "use": "REP",
+       "modes": [
+        "REP"
+       ],
+       "classes": "",
+       "note": "Largura máx. 12000 Hz. Entradas de repetidoras (exclusivo)"
+      },
+      {
+       "start": 51480000,
+       "stop": 51500000,
+       "use": "FM",
+       "modes": [
+        "FM",
+        "DV"
+       ],
+       "classes": "",
+       "note": "Largura máx. 12000 Hz. Não especificado no plano IARU (entre canais)"
+      },
+      {
+       "start": 51500000,
+       "stop": 51600000,
+       "use": "FM",
+       "modes": [
+        "FM",
+        "DV"
+       ],
+       "classes": "",
+       "note": "Largura máx. 12000 Hz. Simplex"
+      },
+      {
+       "start": 51600000,
+       "stop": 51620000,
+       "use": "FM",
+       "modes": [
+        "FM",
+        "DV"
+       ],
+       "classes": "",
+       "note": "Largura máx. 12000 Hz. Não especificado no plano IARU (entre canais)"
+      },
+      {
+       "start": 51620000,
+       "stop": 51980000,
+       "use": "REP",
+       "modes": [
+        "REP"
+       ],
+       "classes": "",
+       "note": "Largura máx. 12000 Hz. Saídas de repetidoras (exclusivo)"
+      },
+      {
+       "start": 51980000,
+       "stop": 52000000,
+       "use": "FM",
+       "modes": [
+        "FM",
+        "DV"
+       ],
+       "classes": "",
+       "note": "Largura máx. 12000 Hz. Não especificado no plano IARU (entre canais)"
+      },
+      {
+       "start": 52000000,
+       "stop": 52100000,
+       "use": "FM",
+       "modes": [
+        "FM",
+        "DV"
+       ],
+       "classes": "",
+       "note": "Largura máx. 12000 Hz. IVG (voz sobre internet)"
+      },
+      {
+       "start": 52100000,
        "stop": 54000000,
        "use": "ALL",
-       "modes": [],
-       "classes": ""
+       "modes": [
+        "CW",
+        "DIG",
+        "SSB",
+        "DV",
+        "OUT",
+        "FM"
+       ],
+       "classes": "",
+       "note": "Largura máx. 12000 Hz"
       }
      ]
     }
-   ]
+   ],
+   "source": "IARU Region 2 Band Plan (setembro de 2020), voluntário: confira o plano e as regras do seu país. Siglas: DM = modos digitais, ACDS = estações de dados automáticas, IBP = balizas internacionais."
   },
   "IARU-R3": {
    "name": "IARU Região 3 (Ásia-Pacífico)",
@@ -2350,16 +3333,48 @@
      "segments": [
       {
        "start": 1800000,
-       "stop": 1840000,
+       "stop": 1810000,
+       "use": "DIG",
+       "modes": [],
+       "classes": "HA",
+       "note": "Largura máx. 6 kHz"
+      },
+      {
+       "start": 1810000,
+       "stop": 1830000,
        "use": "CW",
        "modes": [],
        "classes": "HA",
        "note": "Largura máx. 6 kHz"
       },
       {
-       "start": 1840000,
-       "stop": 1850000,
+       "start": 1830000,
+       "stop": 1839000,
+       "use": "CW",
+       "modes": [],
+       "classes": "HA",
+       "note": "Largura máx. 6 kHz"
+      },
+      {
+       "start": 1839000,
+       "stop": 1840000,
        "use": "DIG",
+       "modes": [],
+       "classes": "HA",
+       "note": "Largura máx. 6 kHz"
+      },
+      {
+       "start": 1840000,
+       "stop": 1843000,
+       "use": "SSB",
+       "modes": [],
+       "classes": "HA",
+       "note": "Largura máx. 6 kHz"
+      },
+      {
+       "start": 1843000,
+       "stop": 1850000,
+       "use": "SSB",
        "modes": [],
        "classes": "HA",
        "note": "Largura máx. 6 kHz"
@@ -2367,7 +3382,7 @@
       {
        "start": 1850000,
        "stop": 2000000,
-       "use": "SSB",
+       "use": "ALL",
        "modes": [],
        "classes": "HA",
        "note": "Largura máx. 6 kHz"
@@ -2381,6 +3396,22 @@
      "segments": [
       {
        "start": 3500000,
+       "stop": 3510000,
+       "use": "CW",
+       "modes": [],
+       "classes": "HA",
+       "note": "Largura máx. 6 kHz"
+      },
+      {
+       "start": 3510000,
+       "stop": 3560000,
+       "use": "CW",
+       "modes": [],
+       "classes": "HA",
+       "note": "Largura máx. 6 kHz"
+      },
+      {
+       "start": 3560000,
        "stop": 3570000,
        "use": "CW",
        "modes": [],
@@ -2389,6 +3420,22 @@
       },
       {
        "start": 3570000,
+       "stop": 3580000,
+       "use": "DIG",
+       "modes": [],
+       "classes": "HA",
+       "note": "Largura máx. 6 kHz"
+      },
+      {
+       "start": 3580000,
+       "stop": 3590000,
+       "use": "DIG",
+       "modes": [],
+       "classes": "HA",
+       "note": "Largura máx. 6 kHz"
+      },
+      {
+       "start": 3590000,
        "stop": 3600000,
        "use": "DIG",
        "modes": [],
@@ -2397,8 +3444,64 @@
       },
       {
        "start": 3600000,
+       "stop": 3625000,
+       "use": "ALL",
+       "modes": [],
+       "classes": "HA",
+       "note": "Largura máx. 6 kHz"
+      },
+      {
+       "start": 3625000,
+       "stop": 3650000,
+       "use": "ALL",
+       "modes": [],
+       "classes": "HA",
+       "note": "Largura máx. 6 kHz"
+      },
+      {
+       "start": 3650000,
+       "stop": 3700000,
+       "use": "ALL",
+       "modes": [],
+       "classes": "HA",
+       "note": "Largura máx. 6 kHz"
+      },
+      {
+       "start": 3700000,
+       "stop": 3775000,
+       "use": "ALL",
+       "modes": [],
+       "classes": "HA",
+       "note": "Largura máx. 6 kHz"
+      },
+      {
+       "start": 3775000,
+       "stop": 3800000,
+       "use": "ALL",
+       "modes": [],
+       "classes": "HA",
+       "note": "Largura máx. 6 kHz"
+      },
+      {
+       "start": 3800000,
+       "stop": 3875000,
+       "use": "ALL",
+       "modes": [],
+       "classes": "HA",
+       "note": "Largura máx. 6 kHz"
+      },
+      {
+       "start": 3875000,
+       "stop": 3900000,
+       "use": "ALL",
+       "modes": [],
+       "classes": "HA",
+       "note": "Largura máx. 6 kHz"
+      },
+      {
+       "start": 3900000,
        "stop": 4000000,
-       "use": "SSB",
+       "use": "ALL",
        "modes": [],
        "classes": "HA",
        "note": "Largura máx. 6 kHz"
@@ -2479,6 +3582,14 @@
      "segments": [
       {
        "start": 7000000,
+       "stop": 7025000,
+       "use": "CW",
+       "modes": [],
+       "classes": "HA",
+       "note": "Largura máx. 6 kHz. Aceitar interferência de radiodifusão (5.142)"
+      },
+      {
+       "start": 7025000,
        "stop": 7040000,
        "use": "CW",
        "modes": [],
@@ -2487,16 +3598,64 @@
       },
       {
        "start": 7040000,
-       "stop": 7080000,
+       "stop": 7047000,
        "use": "DIG",
        "modes": [],
        "classes": "HA",
        "note": "Largura máx. 6 kHz. Aceitar interferência de radiodifusão (5.142)"
       },
       {
-       "start": 7080000,
+       "start": 7047000,
+       "stop": 7050000,
+       "use": "DIG",
+       "modes": [],
+       "classes": "HA",
+       "note": "Largura máx. 6 kHz. Aceitar interferência de radiodifusão (5.142)"
+      },
+      {
+       "start": 7050000,
+       "stop": 7053000,
+       "use": "ALL",
+       "modes": [],
+       "classes": "HA",
+       "note": "Largura máx. 6 kHz. Aceitar interferência de radiodifusão (5.142)"
+      },
+      {
+       "start": 7053000,
+       "stop": 7060000,
+       "use": "ALL",
+       "modes": [],
+       "classes": "HA",
+       "note": "Largura máx. 6 kHz. Aceitar interferência de radiodifusão (5.142)"
+      },
+      {
+       "start": 7060000,
+       "stop": 7100000,
+       "use": "ALL",
+       "modes": [],
+       "classes": "HA",
+       "note": "Largura máx. 6 kHz. Aceitar interferência de radiodifusão (5.142)"
+      },
+      {
+       "start": 7100000,
+       "stop": 7130000,
+       "use": "ALL",
+       "modes": [],
+       "classes": "HA",
+       "note": "Largura máx. 6 kHz. Aceitar interferência de radiodifusão (5.142)"
+      },
+      {
+       "start": 7130000,
+       "stop": 7200000,
+       "use": "ALL",
+       "modes": [],
+       "classes": "HA",
+       "note": "Largura máx. 6 kHz. Aceitar interferência de radiodifusão (5.142)"
+      },
+      {
+       "start": 7200000,
        "stop": 7300000,
-       "use": "SSB",
+       "use": "ALL",
        "modes": [],
        "classes": "HA",
        "note": "Largura máx. 6 kHz. Aceitar interferência de radiodifusão (5.142)"
@@ -2521,6 +3680,17 @@
       },
       {
        "start": 10130000,
+       "stop": 10140000,
+       "use": "DIG",
+       "modes": [
+        "CW",
+        "DIG"
+       ],
+       "classes": "HA",
+       "note": "Largura máx. 1 kHz. Largura máxima de 1 kHz: só CW e modos digitais estreitos"
+      },
+      {
+       "start": 10140000,
        "stop": 10150000,
        "use": "DIG",
        "modes": [
@@ -2539,6 +3709,22 @@
      "segments": [
       {
        "start": 14000000,
+       "stop": 14025000,
+       "use": "CW",
+       "modes": [],
+       "classes": "HA",
+       "note": "Largura máx. 6 kHz"
+      },
+      {
+       "start": 14025000,
+       "stop": 14060000,
+       "use": "CW",
+       "modes": [],
+       "classes": "HA",
+       "note": "Largura máx. 6 kHz"
+      },
+      {
+       "start": 14060000,
        "stop": 14070000,
        "use": "CW",
        "modes": [],
@@ -2547,14 +3733,22 @@
       },
       {
        "start": 14070000,
-       "stop": 14100000,
+       "stop": 14089000,
        "use": "DIG",
        "modes": [],
        "classes": "HA",
        "note": "Largura máx. 6 kHz"
       },
       {
-       "start": 14100000,
+       "start": 14089000,
+       "stop": 14099000,
+       "use": "DIG",
+       "modes": [],
+       "classes": "HA",
+       "note": "Largura máx. 6 kHz"
+      },
+      {
+       "start": 14099000,
        "stop": 14101000,
        "use": "BCN",
        "modes": [],
@@ -2563,8 +3757,48 @@
       },
       {
        "start": 14101000,
+       "stop": 14112000,
+       "use": "ALL",
+       "modes": [],
+       "classes": "HA",
+       "note": "Largura máx. 6 kHz"
+      },
+      {
+       "start": 14112000,
+       "stop": 14190000,
+       "use": "ALL",
+       "modes": [],
+       "classes": "HA",
+       "note": "Largura máx. 6 kHz"
+      },
+      {
+       "start": 14190000,
+       "stop": 14200000,
+       "use": "ALL",
+       "modes": [],
+       "classes": "HA",
+       "note": "Largura máx. 6 kHz"
+      },
+      {
+       "start": 14200000,
+       "stop": 14285000,
+       "use": "ALL",
+       "modes": [],
+       "classes": "HA",
+       "note": "Largura máx. 6 kHz"
+      },
+      {
+       "start": 14285000,
+       "stop": 14300000,
+       "use": "ALL",
+       "modes": [],
+       "classes": "HA",
+       "note": "Largura máx. 6 kHz"
+      },
+      {
+       "start": 14300000,
        "stop": 14350000,
-       "use": "SSB",
+       "use": "ALL",
        "modes": [],
        "classes": "HA",
        "note": "Largura máx. 6 kHz"
@@ -2586,16 +3820,40 @@
       },
       {
        "start": 18095000,
-       "stop": 18110000,
+       "stop": 18105000,
        "use": "DIG",
        "modes": [],
        "classes": "HA",
        "note": "Largura máx. 6 kHz"
       },
       {
-       "start": 18110000,
+       "start": 18105000,
+       "stop": 18109000,
+       "use": "DIG",
+       "modes": [],
+       "classes": "HA",
+       "note": "Largura máx. 6 kHz"
+      },
+      {
+       "start": 18109000,
+       "stop": 18111000,
+       "use": "BCN",
+       "modes": [],
+       "classes": "HA",
+       "note": "Largura máx. 6 kHz"
+      },
+      {
+       "start": 18111000,
+       "stop": 18120000,
+       "use": "ALL",
+       "modes": [],
+       "classes": "HA",
+       "note": "Largura máx. 6 kHz"
+      },
+      {
+       "start": 18120000,
        "stop": 18168000,
-       "use": "SSB",
+       "use": "ALL",
        "modes": [],
        "classes": "HA",
        "note": "Largura máx. 6 kHz"
@@ -2617,16 +3875,56 @@
       },
       {
        "start": 21070000,
-       "stop": 21150000,
+       "stop": 21090000,
        "use": "DIG",
        "modes": [],
        "classes": "HA",
        "note": "Largura máx. 6 kHz"
       },
       {
-       "start": 21150000,
+       "start": 21090000,
+       "stop": 21110000,
+       "use": "DIG",
+       "modes": [],
+       "classes": "HA",
+       "note": "Largura máx. 6 kHz"
+      },
+      {
+       "start": 21110000,
+       "stop": 21120000,
+       "use": "DIG",
+       "modes": [],
+       "classes": "HA",
+       "note": "Largura máx. 6 kHz"
+      },
+      {
+       "start": 21120000,
+       "stop": 21149000,
+       "use": "ALL",
+       "modes": [],
+       "classes": "HA",
+       "note": "Largura máx. 6 kHz"
+      },
+      {
+       "start": 21149000,
+       "stop": 21151000,
+       "use": "BCN",
+       "modes": [],
+       "classes": "HA",
+       "note": "Largura máx. 6 kHz"
+      },
+      {
+       "start": 21151000,
+       "stop": 21380000,
+       "use": "ALL",
+       "modes": [],
+       "classes": "HA",
+       "note": "Largura máx. 6 kHz"
+      },
+      {
+       "start": 21380000,
        "stop": 21450000,
-       "use": "SSB",
+       "use": "ALL",
        "modes": [],
        "classes": "HA",
        "note": "Largura máx. 6 kHz"
@@ -2648,16 +3946,40 @@
       },
       {
        "start": 24915000,
-       "stop": 24930000,
+       "stop": 24925000,
        "use": "DIG",
        "modes": [],
        "classes": "HA",
        "note": "Largura máx. 6 kHz"
       },
       {
-       "start": 24930000,
+       "start": 24925000,
+       "stop": 24929000,
+       "use": "DIG",
+       "modes": [],
+       "classes": "HA",
+       "note": "Largura máx. 6 kHz"
+      },
+      {
+       "start": 24929000,
+       "stop": 24931000,
+       "use": "BCN",
+       "modes": [],
+       "classes": "HA",
+       "note": "Largura máx. 6 kHz"
+      },
+      {
+       "start": 24931000,
+       "stop": 24940000,
+       "use": "ALL",
+       "modes": [],
+       "classes": "HA",
+       "note": "Largura máx. 6 kHz"
+      },
+      {
+       "start": 24940000,
        "stop": 24990000,
-       "use": "SSB",
+       "use": "ALL",
        "modes": [],
        "classes": "HA",
        "note": "Largura máx. 6 kHz"
@@ -2679,6 +4001,22 @@
       },
       {
        "start": 28070000,
+       "stop": 28120000,
+       "use": "DIG",
+       "modes": [],
+       "classes": "HA",
+       "note": "Largura máx. 20 kHz"
+      },
+      {
+       "start": 28120000,
+       "stop": 28150000,
+       "use": "DIG",
+       "modes": [],
+       "classes": "HA",
+       "note": "Largura máx. 20 kHz"
+      },
+      {
+       "start": 28150000,
        "stop": 28190000,
        "use": "DIG",
        "modes": [],
@@ -2687,24 +4025,96 @@
       },
       {
        "start": 28190000,
-       "stop": 28225000,
+       "stop": 28199000,
+       "use": "CW",
+       "modes": [],
+       "classes": "HA",
+       "note": "Largura máx. 20 kHz"
+      },
+      {
+       "start": 28199000,
+       "stop": 28201000,
        "use": "BCN",
        "modes": [],
        "classes": "HA",
        "note": "Largura máx. 20 kHz"
       },
       {
+       "start": 28201000,
+       "stop": 28225000,
+       "use": "CW",
+       "modes": [],
+       "classes": "HA",
+       "note": "Largura máx. 20 kHz"
+      },
+      {
        "start": 28225000,
+       "stop": 28300000,
+       "use": "ALL",
+       "modes": [],
+       "classes": "HA",
+       "note": "Largura máx. 20 kHz"
+      },
+      {
+       "start": 28300000,
+       "stop": 28320000,
+       "use": "ALL",
+       "modes": [],
+       "classes": "HA",
+       "note": "Largura máx. 20 kHz"
+      },
+      {
+       "start": 28320000,
        "stop": 29000000,
-       "use": "SSB",
+       "use": "ALL",
        "modes": [],
        "classes": "HA",
        "note": "Largura máx. 20 kHz"
       },
       {
        "start": 29000000,
-       "stop": 29700000,
+       "stop": 29200000,
+       "use": "ALL",
+       "modes": [],
+       "classes": "HA",
+       "note": "Largura máx. 20 kHz"
+      },
+      {
+       "start": 29200000,
+       "stop": 29300000,
+       "use": "ALL",
+       "modes": [],
+       "classes": "HA",
+       "note": "Largura máx. 20 kHz"
+      },
+      {
+       "start": 29300000,
+       "stop": 29510000,
+       "use": "ALL",
+       "modes": [],
+       "classes": "HA",
+       "note": "Largura máx. 20 kHz"
+      },
+      {
+       "start": 29520000,
+       "stop": 29590000,
+       "use": "REP",
+       "modes": [],
+       "classes": "HA",
+       "note": "Largura máx. 20 kHz"
+      },
+      {
+       "start": 29590000,
+       "stop": 29620000,
        "use": "FM",
+       "modes": [],
+       "classes": "HA",
+       "note": "Largura máx. 20 kHz"
+      },
+      {
+       "start": 29620000,
+       "stop": 29700000,
+       "use": "REP",
        "modes": [],
        "classes": "HA",
        "note": "Largura máx. 20 kHz"
@@ -2726,22 +4136,118 @@
       },
       {
        "start": 50100000,
-       "stop": 50300000,
+       "stop": 50125000,
        "use": "SSB",
        "modes": [],
        "classes": "BHA",
        "note": "Largura máx. 30 kHz"
       },
       {
-       "start": 50300000,
+       "start": 50125000,
        "stop": 50400000,
-       "use": "DIG",
+       "use": "SSB",
        "modes": [],
        "classes": "BHA",
        "note": "Largura máx. 30 kHz"
       },
       {
        "start": 50400000,
+       "stop": 50500000,
+       "use": "ALL",
+       "modes": [],
+       "classes": "BHA",
+       "note": "Largura máx. 30 kHz"
+      },
+      {
+       "start": 50500000,
+       "stop": 50600000,
+       "use": "ALL",
+       "modes": [],
+       "classes": "BHA",
+       "note": "Largura máx. 30 kHz"
+      },
+      {
+       "start": 50600000,
+       "stop": 50800000,
+       "use": "ALL",
+       "modes": [],
+       "classes": "BHA",
+       "note": "Largura máx. 30 kHz"
+      },
+      {
+       "start": 50800000,
+       "stop": 51000000,
+       "use": "ALL",
+       "modes": [],
+       "classes": "BHA",
+       "note": "Largura máx. 30 kHz"
+      },
+      {
+       "start": 51000000,
+       "stop": 51110000,
+       "use": "SSB",
+       "modes": [],
+       "classes": "BHA",
+       "note": "Largura máx. 30 kHz"
+      },
+      {
+       "start": 51110000,
+       "stop": 51480000,
+       "use": "REP",
+       "modes": [],
+       "classes": "BHA",
+       "note": "Largura máx. 30 kHz"
+      },
+      {
+       "start": 51480000,
+       "stop": 51500000,
+       "use": "FM",
+       "modes": [],
+       "classes": "BHA",
+       "note": "Largura máx. 30 kHz"
+      },
+      {
+       "start": 51500000,
+       "stop": 51600000,
+       "use": "FM",
+       "modes": [],
+       "classes": "BHA",
+       "note": "Largura máx. 30 kHz"
+      },
+      {
+       "start": 51600000,
+       "stop": 51620000,
+       "use": "FM",
+       "modes": [],
+       "classes": "BHA",
+       "note": "Largura máx. 30 kHz"
+      },
+      {
+       "start": 51620000,
+       "stop": 51980000,
+       "use": "REP",
+       "modes": [],
+       "classes": "BHA",
+       "note": "Largura máx. 30 kHz"
+      },
+      {
+       "start": 51980000,
+       "stop": 52000000,
+       "use": "FM",
+       "modes": [],
+       "classes": "BHA",
+       "note": "Largura máx. 30 kHz"
+      },
+      {
+       "start": 52000000,
+       "stop": 52100000,
+       "use": "FM",
+       "modes": [],
+       "classes": "BHA",
+       "note": "Largura máx. 30 kHz"
+      },
+      {
+       "start": 52100000,
        "stop": 54000000,
        "use": "ALL",
        "modes": [],

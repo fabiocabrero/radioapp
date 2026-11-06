@@ -15,6 +15,10 @@ Marque **Simulador** para testar sem o rádio. Para o rádio real: no menu do IC
 
 ## Recursos
 
+- **Interface em apps**: tela principal do **Rádio** (frequência, espectro, volume, PTT) e uma tela de **Apps** em blocos, como no Xiegu; cada área (CW, FT8/FT4, RTTY, SSTV, Winlink e outros, Mapa, Ondas curtas, POTA, Concursos, Log, Configurações...) é uma tela própria. Cabeçalho fixo com frequência, modo, S-meter e o botão **PARAR TX**. Atalhos: F1 Rádio, F2 Apps, Esc volta.
+- **Protocolos e modos**: catálogo com o reconhecimento de cada protocolo (categorias da IARU R2: CW, DM, ACDS, DV, imagem, IBP; códigos digitais da FCC § 97.309) e os centros de atividade oficiais da IARU para sintonizar com um clique.
+- **Winlink e outros** (VARA, VarAC, Pat, ARDOP, JS8Call, Fldigi, WSJT-X, FreeDV, MMSSTV, N1MM): detecta o que está instalado, abre o programa e explica como ligá-lo ao rádio e à placa de som. VARA e VarAC são proprietários e não podem ser embutidos.
+- **Plano IARU Região 2 oficial** (2020): largura máxima, modos, ACDS, balizas e centros de atividade por segmento.
 - Frequência (roda do mouse, duplo clique para digitar), modos LSB/USB/CW/CW-R/AM/FM/RTTY, DATA, filtros, passo, PTT
 - Medidores S, potência e ROE
 - Espectro e waterfall do scope do rádio (CI-V 0x27), com faixa do plano de bandas; fallback para espectro do áudio
