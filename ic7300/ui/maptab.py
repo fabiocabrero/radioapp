@@ -12,9 +12,11 @@ import numpy as np
 import pyqtgraph as pg
 from PySide6 import QtCore, QtGui, QtWidgets
 
-from .. import geo, mapdata, propagation
+from .. import geo, mapdata, propagation, stations
 from ..bands import BandPlan
 from ..dxcc import Cty
+from ..spots import ClusterClient, Spot, parse_dx_line
+from ..stations import Station
 
 _GRID_WORD = re.compile(r"^[A-R]{2}[0-9]{2}([A-X]{2})?$", re.I)
 COND_COLORS = {"Good": "#2e7d32", "Fair": "#f9a825", "Poor": "#c62828"}
@@ -23,6 +25,10 @@ LAYERS = {
     "ft8": ("Estações FT8/FT4 decodificadas", (120, 200, 255)),
     "psk_tx": ("PSK Reporter: quem me ouve", (90, 220, 120)),
     "psk_rx": ("PSK Reporter: quem eu ouço", (255, 140, 60)),
+    "psk_band": ("PSK Reporter: atividade na banda", (186, 140, 255)),
+    "wspr": ("WSPR (wspr.live)", (255, 105, 180)),
+    "rbn": ("Reverse Beacon Network", (255, 90, 90)),
+    "busca": ("Indicativo procurado", (255, 255, 255)),
 }
 
 
@@ -32,6 +38,7 @@ class Point:
     lon: float
     label: str
     stamp: float
+    station: Optional[Station] = None
 
 
 class MapTab(QtWidgets.QWidget):
@@ -39,6 +46,9 @@ class MapTab(QtWidgets.QWidget):
     _psk_ready = QtCore.Signal(object, bool)
     _status = QtCore.Signal(str)
     solar_updated = QtCore.Signal(object)
+    _band_ready = QtCore.Signal(object, str)
+    _rbn_spot = QtCore.Signal(object)
+    action_requested = QtCore.Signal(object, str)   # (Station, chave da ação) tratada pela janela principal
 
     def __init__(self, plan: BandPlan, cty: Cty) -> None:
         super().__init__()
@@ -49,6 +59,10 @@ class MapTab(QtWidgets.QWidget):
         self.points: dict[str, list[Point]] = {k: [] for k in LAYERS}
         self.target: Optional[tuple[float, float]] = None
         self._psk_last = 0.0
+        self.dial = None  # função que devolve a frequência do rádio (Hz); definida pela janela principal
+        self._wspr_last = 0.0
+        self.rbn: Optional[ClusterClient] = None
+        self.selected: Optional[Station] = None
 
         lay = QtWidgets.QHBoxLayout(self)
         self.plot = pg.PlotWidget(background="#0b1220")
@@ -58,7 +72,7 @@ class MapTab(QtWidgets.QWidget):
         self.plot.showAxis("left", False)
         self.plot.showAxis("bottom", False)
         vb = self.plot.getPlotItem().vb
-        vb.setLimits(xMin=-180, xMax=180, yMin=-90, yMax=90)
+        vb.setLimits(xMin=-360, xMax=360, yMin=-200, yMax=200)
         vb.disableAutoRange()
         self._zoomed = False
         vb.sigRangeChangedManually.connect(lambda *_: setattr(self, "_zoomed", True))
@@ -80,8 +94,9 @@ class MapTab(QtWidgets.QWidget):
         self.scatter: dict[str, pg.ScatterPlotItem] = {}
         for key, (_, color) in LAYERS.items():
             s = pg.ScatterPlotItem(size=9, pen=pg.mkPen("#0b1220"), brush=pg.mkBrush(*color), hoverable=True,
-                                   tip=lambda x, y, data, **_: data)
+                                   tip=lambda x, y, data, **_: data.label() if data is not None else "")
             s.setZValue(10)
+            s.sigClicked.connect(self._point_clicked)
             self.plot.addItem(s)
             self.scatter[key] = s
         self.home_item = pg.ScatterPlotItem(size=16, symbol="star", pen=pg.mkPen("w"), brush=pg.mkBrush("#ff5252"))
@@ -89,8 +104,15 @@ class MapTab(QtWidgets.QWidget):
         self.plot.addItem(self.home_item)
         self.plot.scene().sigMouseClicked.connect(self._on_click)
 
-        side = QtWidgets.QVBoxLayout()
-        lay.addLayout(side, 1)
+        side_scroll = QtWidgets.QScrollArea()
+        side_scroll.setWidgetResizable(True)
+        side_scroll.setFrameShape(QtWidgets.QFrame.Shape.NoFrame)
+        side_scroll.setMinimumWidth(380)
+        side_scroll.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        side_body = QtWidgets.QWidget()
+        side_scroll.setWidget(side_body)
+        side = QtWidgets.QVBoxLayout(side_body)
+        lay.addWidget(side_scroll, 1)
         self.lbl_solar = QtWidgets.QLabel("Índices solares: carregando…")
         self.lbl_solar.setWordWrap(True)
         self.lbl_solar.setStyleSheet("font: 600 10pt")
@@ -113,6 +135,8 @@ class MapTab(QtWidgets.QWidget):
             cb = QtWidgets.QCheckBox(name)
             cb.setChecked(True)
             cb.setStyleSheet(f"QCheckBox{{color: rgb{color}}}")
+            if key == "busca":
+                cb.hide()
             cb.toggled.connect(lambda _=False: self._refresh_layers())
             side.addWidget(cb)
             self.checks[key] = cb
@@ -129,16 +153,20 @@ class MapTab(QtWidgets.QWidget):
         row.addWidget(self.btn_solar)
         row.addWidget(self.btn_psk)
         side.addLayout(row)
+        side.addWidget(self._build_sources_box())
+        side.addWidget(self._build_station_card())
         self.tbl_psk = QtWidgets.QTableWidget(0, 3)
         self.tbl_psk.setHorizontalHeaderLabels(["Banda", "Relatos", "Mais longe"])
         self.tbl_psk.verticalHeader().setVisible(False)
         self.tbl_psk.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)
         self.tbl_psk.horizontalHeader().setStretchLastSection(True)
-        side.addWidget(self.tbl_psk, 1)
+        self.tbl_psk.setMinimumHeight(110)
+        side.addWidget(self.tbl_psk)
         self.lbl_target = QtWidgets.QLabel("Clique no mapa: distância e azimute a partir do seu local.")
         self.lbl_target.setWordWrap(True)
         side.addWidget(self.lbl_target)
-        self.lbl_info = QtWidgets.QLabel("Fontes: N0NBH/HamQSL (índices), PSK Reporter (relatos), Natural Earth (mapa).")
+        self.lbl_info = QtWidgets.QLabel("Fontes: N0NBH/HamQSL (índices), PSK Reporter, wspr.live, Reverse Beacon Network, "
+                                         "DX Cluster, POTA e Natural Earth (mapa).")
         self.lbl_info.setWordWrap(True)
         self.lbl_info.setStyleSheet("color:#8a97a8; font-size:8pt")
         side.addWidget(self.lbl_info)
@@ -148,7 +176,12 @@ class MapTab(QtWidgets.QWidget):
         self.btn_psk.clicked.connect(self.refresh_psk)
         self._solar_ready.connect(self._on_solar)
         self._psk_ready.connect(self._on_psk)
+        self._band_ready.connect(self._on_stations)
+        self._rbn_spot.connect(self._on_rbn_spot)
         self._status.connect(self.lbl_info.setText)
+        self._rbn_dirty = False
+        self.rbn_timer = QtCore.QTimer(self, interval=3000, timeout=self._flush_rbn)
+        self.rbn_timer.start()
         self.timer = QtCore.QTimer(self, interval=60_000, timeout=self._minute)
         self.timer.start()
         self._ticks = 0
@@ -161,7 +194,7 @@ class MapTab(QtWidgets.QWidget):
         vb = self.plot.getPlotItem().vb
         vb.setLimits(xMin=None, xMax=None, yMin=None, yMax=None)
         vb.setRange(xRange=(-180, 180), yRange=(-90, 90), padding=0)
-        vb.setLimits(xMin=-180, xMax=180, yMin=-90, yMax=90)
+        vb.setLimits(xMin=-360, xMax=360, yMin=-200, yMax=200)
         self._zoomed = False
 
     def showEvent(self, e: QtGui.QShowEvent) -> None:
@@ -218,8 +251,8 @@ class MapTab(QtWidgets.QWidget):
         for key, s in self.scatter.items():
             on = self.checks[key].isChecked()
             pts = self.points[key] if on else []
-            s.setData(x=[p.lon for p in pts], y=[p.lat for p in pts], data=[p.label for p in pts])
-            if on and key.startswith("psk") and self.home:
+            s.setData(x=[p.lon for p in pts], y=[p.lat for p in pts], data=[p.station for p in pts])
+            if on and key in ("psk_tx", "psk_rx") and self.home:
                 for p in pts:
                     lon, lat = mapdata.great_circle(self.home[0], self.home[1], p.lat, p.lon, 40)
                     routes_x += list(lon) + [np.nan]
@@ -236,20 +269,35 @@ class MapTab(QtWidgets.QWidget):
         self._update_now_label()
         self._refresh_layers()
 
-    def add_point(self, layer: str, lat: float, lon: float, label: str) -> None:
+    def add_point(self, layer: str, lat: float, lon: float, label: str, station: Optional[Station] = None) -> None:
+        station = station or Station(label.split()[0], lat=lat, lon=lon, info=label, source=layer)
         pts = self.points[layer]
-        pts[:] = [p for p in pts if p.label != label]
-        pts.append(Point(lat, lon, label, time.time()))
+        pts[:] = [p for p in pts if p.station is None or p.station.call != station.call]
+        pts.append(Point(lat, lon, label, time.time(), station))
         del pts[:-400]
         self._refresh_layers()
 
-    def add_spot(self, call: str, freq: int, info: str, lat: Optional[float] = None, lon: Optional[float] = None) -> None:
-        if lat is None or lon is None:
-            ent = self.cty.lookup(call)
+    def add_station(self, layer: str, st: Station, refresh: bool = True) -> None:
+        if st.lat is None or st.lon is None:
+            ent = self.cty.lookup(st.call)
             if not ent:
                 return
-            lat, lon = ent.lat, ent.lon
-        self.add_point("spots", lat, lon, f"{call}  {freq / 1e3:.1f} kHz  {info}".strip())
+            st.lat, st.lon = ent.lat, ent.lon
+        pts = self.points[layer]
+        pts[:] = [p for p in pts if p.station is None or p.station.call != st.call]
+        pts.append(Point(st.lat, st.lon, st.label(), st.stamp, st))
+        del pts[:-600]
+        if refresh:
+            self._refresh_layers()
+
+    def add_spot(self, call: str, freq: int, info: str, lat: Optional[float] = None, lon: Optional[float] = None,
+                 mode: str = "", source: str = "spots", ref: str = "") -> None:
+        if not mode:
+            mode, _ = stations.split_cluster_info(info)
+        if not mode:  # sem modo no comentário: usa o que o plano de bandas costuma ter naquela frequência
+            guess, data = self.plan.suggest_mode(freq)
+            mode = "CW" if guess == "CW" else ("" if data else "SSB")
+        self.add_station("spots", Station(call, freq, mode, source, lat, lon, info=info.strip(), ref=ref))
 
     def add_ft_message(self, text: str, snr: int, freq: int) -> None:
         words = text.replace("<", "").replace(">", "").split()
@@ -269,7 +317,9 @@ class MapTab(QtWidgets.QWidget):
             if not ent:
                 return
             lat, lon = ent.lat, ent.lon
-        self.add_point("ft8", lat, lon, f"{sender}  {snr:+d} dB  {text}")
+        dial = self.dial() if self.dial else 0
+        self.add_station("ft8", Station(sender, dial + freq if dial else 0, "FT8", "ft8", lat, lon, grid or "",
+                                        f"{snr:+d} dB  {text}"))
 
     # ---------------------------------------------------------------- propagação
     def refresh_solar(self) -> None:
@@ -336,7 +386,9 @@ class MapTab(QtWidgets.QWidget):
             if not pos:
                 continue
             other = rep.receiver if heard_me else rep.sender
-            self.points[layer].append(Point(pos[0], pos[1], f"{other}  {rep.snr:+d} dB  {rep.freq / 1e6:.3f} MHz {rep.mode}", time.time()))
+            st = Station(other, rep.freq, rep.mode, layer, pos[0], pos[1],
+                         rep.receiver_grid if heard_me else rep.sender_grid, f"{rep.snr:+d} dB")
+            self.points[layer].append(Point(pos[0], pos[1], st.label(), time.time(), st))
             band = self.plan.band_for(rep.freq) or f"{rep.freq / 1e6:.1f} MHz"
             dist = geo.distance_bearing(self.home[0], self.home[1], pos[0], pos[1])[0] if self.home else 0.0
             stats.setdefault(f"{band}|{layer}", []).append(dist)
@@ -349,6 +401,193 @@ class MapTab(QtWidgets.QWidget):
             for c, v in enumerate((band, str(len(dists)), f"{max(dists):.0f} km" if max(dists) else "—")):
                 self.tbl_psk.setItem(r, c, QtWidgets.QTableWidgetItem(v))
         self._refresh_layers()
+
+    # ---------------------------------------------------------------- fontes e estação selecionada
+    def _build_sources_box(self) -> QtWidgets.QGroupBox:
+        box = QtWidgets.QGroupBox("Fontes ao vivo")
+        g = QtWidgets.QGridLayout(box)
+        self.cb_band = QtWidgets.QComboBox()
+        for name in self.plan.band_names():
+            start, stop = self.plan.band_range(name)
+            self.cb_band.addItem(name, (start, stop))
+        self.cb_mode = QtWidgets.QComboBox()
+        for m in ("FT8", "FT4", "CW", "RTTY", "JS8", "PSK31", "WSPR", "(todos)"):
+            self.cb_mode.addItem(m, "" if m == "(todos)" else m)
+        self.btn_band = QtWidgets.QPushButton("Atividade na banda (PSK Reporter)")
+        self.btn_wspr = QtWidgets.QPushButton("WSPR agora (wspr.live)")
+        self.chk_rbn = QtWidgets.QCheckBox("Reverse Beacon Network ao vivo (CW/RTTY)")
+        self.chk_rbn.setToolTip("Conecta a telnet.reversebeacon.net:7000 com o seu indicativo. "
+                                "Lista o que os receptores automáticos ouvem.")
+        g.addWidget(QtWidgets.QLabel("Banda"), 0, 0)
+        g.addWidget(self.cb_band, 0, 1)
+        g.addWidget(QtWidgets.QLabel("Modo"), 0, 2)
+        g.addWidget(self.cb_mode, 0, 3)
+        g.addWidget(self.btn_band, 1, 0, 1, 4)
+        g.addWidget(self.btn_wspr, 2, 0, 1, 4)
+        g.addWidget(self.chk_rbn, 3, 0, 1, 4)
+        self.btn_band.clicked.connect(self.refresh_band)
+        self.btn_wspr.clicked.connect(self.refresh_wspr)
+        self.chk_rbn.toggled.connect(self._toggle_rbn)
+        return box
+
+    def _build_station_card(self) -> QtWidgets.QFrame:
+        card = QtWidgets.QFrame()
+        card.setObjectName("card")
+        v = QtWidgets.QVBoxLayout(card)
+        search = QtWidgets.QHBoxLayout()
+        self.ed_search = QtWidgets.QLineEdit()
+        self.ed_search.setPlaceholderText("Procurar indicativo (ex.: PY2XX)")
+        btn = QtWidgets.QPushButton("Localizar")
+        search.addWidget(self.ed_search, 1)
+        search.addWidget(btn)
+        v.addLayout(search)
+        self.lbl_sel = QtWidgets.QLabel("Clique numa estação do mapa para ver as opções de conexão.")
+        self.lbl_sel.setWordWrap(True)
+        self.lbl_sel.setObjectName("cardTitle")
+        v.addWidget(self.lbl_sel)
+        self.lbl_sel_info = QtWidgets.QLabel("")
+        self.lbl_sel_info.setWordWrap(True)
+        self.lbl_sel_info.setObjectName("cardTips")
+        v.addWidget(self.lbl_sel_info)
+        self.actions_box = QtWidgets.QVBoxLayout()
+        v.addLayout(self.actions_box)
+        btn.clicked.connect(self.search_call)
+        self.ed_search.returnPressed.connect(self.search_call)
+        return card
+
+    def _point_clicked(self, scatter, points, *_) -> None:
+        if points:
+            st = points[0].data()
+            if isinstance(st, Station):
+                self.select_station(st)
+
+    def search_call(self) -> None:
+        call = self.ed_search.text().strip().upper()
+        if not call:
+            return
+        ent = self.cty.lookup(call)
+        if not ent:
+            self.lbl_sel.setText(f"{call}: indicativo não reconhecido.")
+            return
+        st = Station(call, 0, "", "busca", ent.lat, ent.lon, info=f"{ent.name} (posição aproximada: centro do país)")
+        self.points["busca"] = [Point(ent.lat, ent.lon, call, time.time(), st)]
+        self._refresh_layers()
+        self.select_station(st)
+
+    def select_station(self, st: Station) -> None:
+        self.selected = st
+        self.lbl_sel.setText(st.label())
+        info = [f"Fonte: {stations.SOURCES.get(st.source, st.source)}"]
+        if st.spotter:
+            info.append(f"ouvido por {st.spotter}")
+        if st.grid:
+            info.append(f"grid {st.grid}")
+        if self.home and st.lat is not None and st.lon is not None:
+            d, b = geo.distance_bearing(self.home[0], self.home[1], st.lat, st.lon)
+            info.append(f"{d:.0f} km, azimute {b:.0f}°")
+            glon, glat = mapdata.great_circle(self.home[0], self.home[1], st.lat, st.lon)
+            self._gc.setData(glon, glat)
+        if st.freq and self.home and self.solar:
+            band = self.plan.band_for(st.freq)
+            if band:
+                day = propagation.is_daytime(*self.home)
+                cond = self.solar.condition_for(band, day)
+                info.append(f"propagação agora em {band}: {propagation.CONDITION_PT.get(cond, '—')}")
+        self.lbl_sel_info.setText(" · ".join(info))
+        while self.actions_box.count():
+            w = self.actions_box.takeAt(0).widget()
+            if w:
+                w.deleteLater()
+        main, other = stations.actions_for(st)
+        for i, act in enumerate(main):
+            b = QtWidgets.QPushButton(act.label)
+            b.setToolTip(act.hint)
+            if i == 0:
+                b.setStyleSheet("QPushButton{background:#2e7d32;font-weight:700}")
+            b.clicked.connect(lambda _=False, a=act: self.action_requested.emit(st, a.key))
+            self.actions_box.addWidget(b)
+        more = QtWidgets.QPushButton("Outras ferramentas e consultas  ▾")
+        menu = QtWidgets.QMenu(more)
+        for act in other:
+            menu.addAction(act.label, lambda a=act: self.action_requested.emit(st, a.key))
+        more.setMenu(menu)
+        self.actions_box.addWidget(more)
+
+    # PSK Reporter por banda e modo
+    def refresh_band(self) -> None:
+        wait = 300 - (time.time() - self._psk_last)
+        if wait > 0:
+            self._status.emit(f"PSK Reporter: aguarde {int(wait)} s (limite de 1 consulta a cada 5 min).")
+            return
+        low, high = self.cb_band.currentData()
+        mode = self.cb_mode.currentData() or ""
+        if mode == "WSPR":
+            self.refresh_wspr()
+            return
+        self._psk_last = time.time()
+
+        def work() -> None:
+            try:
+                self._band_ready.emit(stations.fetch_psk_band(low, high, mode), "psk_band")
+            except Exception as exc:
+                self._status.emit(f"PSK Reporter: {exc}")
+
+        self._status.emit("PSK Reporter: consultando a banda…")
+        threading.Thread(target=work, daemon=True).start()
+
+    def refresh_wspr(self) -> None:
+        if time.time() - self._wspr_last < 60:
+            self._status.emit("wspr.live: aguarde 1 min entre consultas.")
+            return
+        self._wspr_last = time.time()
+        low, high = self.cb_band.currentData()
+
+        def work() -> None:
+            try:
+                got = [s for s in stations.fetch_wspr(1800) if low <= s.freq <= high]
+                self._band_ready.emit(got, "wspr")
+            except Exception as exc:
+                self._status.emit(f"wspr.live: {exc}")
+
+        self._status.emit("wspr.live: consultando…")
+        threading.Thread(target=work, daemon=True).start()
+
+    def _on_stations(self, sts: list, layer: str) -> None:
+        self.points[layer].clear()
+        for st in sts:
+            self.add_station(layer, st, refresh=False)
+        self._refresh_layers()
+        self._status.emit(f"{stations.SOURCES[layer]}: {len(self.points[layer])} estações no mapa.")
+
+    # Reverse Beacon Network
+    def _toggle_rbn(self, on: bool) -> None:
+        if self.rbn:
+            self.rbn.stop()
+            self.rbn = None
+        if not on:
+            return
+        if not self.call:
+            self.chk_rbn.setChecked(False)
+            self._status.emit("Informe seu indicativo (Local / GPS) para entrar no Reverse Beacon Network.")
+            return
+        self.rbn = ClusterClient(stations.RBN_HOST, stations.RBN_PORT_CW_RTTY, self.call,
+                                 lambda sp: self._rbn_spot.emit(sp), lambda m: self._status.emit(f"RBN: {m}"))
+        self.rbn.start()
+
+    def _on_rbn_spot(self, sp: Spot) -> None:
+        mode, _ = stations.split_cluster_info(sp.info)
+        self.add_station("rbn", Station(sp.call, sp.freq, mode, "rbn", info=sp.info, spotter=sp.spotter), refresh=False)
+        self._rbn_dirty = True
+
+    def _flush_rbn(self) -> None:
+        if self._rbn_dirty:
+            self._rbn_dirty = False
+            self._refresh_layers()
+
+    def closeEvent(self, e: QtGui.QCloseEvent) -> None:
+        if self.rbn:
+            self.rbn.stop()
+        super().closeEvent(e)
 
     # ---------------------------------------------------------------- interação
     def _on_click(self, ev) -> None:

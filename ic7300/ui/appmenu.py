@@ -29,7 +29,7 @@ SECTIONS: tuple[tuple[str, tuple[AppEntry, ...]], ...] = (
         AppEntry("protocols", "📚", "Protocolos e modos", "IARU, ARRL e FCC: o que é cada um"),
     )),
     ("Informação", (
-        AppEntry("map", "🗺", "Mapa e propagação", "Dia/noite, índices solares, spots"),
+        AppEntry("map", "🗺", "Mapa de estações", "PSK Reporter, WSPR, RBN, spots e conexão"),
         AppEntry("swl", "🌍", "Ondas curtas", "Emissoras no ar, horários e alvo"),
         AppEntry("bands", "📊", "Plano de bandas", "Faixas, classes e modos do seu país"),
     )),

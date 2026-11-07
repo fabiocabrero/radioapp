@@ -28,6 +28,7 @@ from .digitaltabs import JtTab, RttyTab
 from .extappstab import ExtAppsTab
 from .protocolstab import ProtocolsTab
 from .sstvtab import SstvTab
+from .. import stations
 from .maptab import MapTab
 from .potatab import PotaTab
 from .swltab import SwlTab
@@ -145,6 +146,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ext.message.connect(self.bridge.message.emit)
         self._add_page("ext", "Winlink e outros", self.ext)
         self.map = MapTab(self.plan, self.cty)
+        self.map.dial = lambda: self.state.freq
+        self.map.action_requested.connect(self._station_action)
         self._add_page("map", "Mapa e propagação", self.map)
         self.swl = SwlTab(self.plan)
         self.map.solar_updated.connect(self.swl.set_solar)
@@ -1343,7 +1346,47 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def _pota_to_map(self, spots) -> None:
         for s in spots[:150]:
-            self.map.add_spot(s.call, s.freq, s.info, s.lat, s.lon)
+            ref = s.info.split(" ", 1)[0]
+            self.map.add_spot(s.call, s.freq, s.info, s.lat, s.lon, mode=s.mode.upper(), source="pota", ref=ref)
+
+    def _station_action(self, st, key: str) -> None:
+        """Ação escolhida no mapa para um indicativo: sintoniza, abre a tela ou o programa certo e leva o indicativo junto."""
+        kind, _, arg = key.partition(":")
+        clip = QtWidgets.QApplication.clipboard()
+        if kind == "copy":
+            clip.setText(st.call)
+            self.bridge.message.emit(f"{st.call} copiado.")
+            return
+        if kind == "web":
+            QtGui.QDesktopServices.openUrl(QtCore.QUrl(stations.web_url(arg, st.call)))
+            return
+        if kind == "pota":
+            self.ed_call.setText(st.call)
+            self.ed_ref.setText(st.ref)
+            self.bridge.message.emit(f"{st.call} e a referência {st.ref} foram para o log.")
+            return
+        family = stations.mode_family(st.mode, st.freq, st.info)
+        if st.freq:
+            if self.radio:
+                mode, data = stations.mode_for_radio(family, st.freq, st.mode)
+                self._tune(st.freq)
+                self.radio.set_mode(mode, data, self.state.filter)
+            else:
+                self.bridge.message.emit("Rádio desconectado: conecte (ou use o simulador) para sintonizar.")
+        self.ed_call.setText(st.call)
+        if kind == "page":
+            self.show_page(arg)
+        elif kind == "app":
+            clip.setText(st.call)  # para colar no campo de conexão do programa
+            if self.ext.open_app(arg):
+                self.bridge.message.emit(f"Indicativo {st.call} copiado: cole no campo de conexão. "
+                                         f"Frequência {st.freq / 1e6:.4f} MHz já sintonizada." if st.freq else
+                                         f"Indicativo {st.call} copiado: cole no campo de conexão.")
+            else:
+                self.bridge.message.emit("Programa não encontrado: veja como obtê-lo em Winlink e outros.")
+                self.show_page("ext")
+        else:  # "tune"
+            self.bridge.message.emit(f"Sintonizado em {st.freq / 1e6:.4f} MHz.")
 
     # ---------------------------------------------------------------- local
     def _grid_to_ll(self) -> None:

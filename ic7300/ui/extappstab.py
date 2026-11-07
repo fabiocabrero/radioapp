@@ -88,6 +88,14 @@ class ExtAppsTab(QtWidgets.QWidget):
     rigctl_requested = QtCore.Signal()
     message = QtCore.Signal(str)
 
+    def open_app(self, key: str) -> bool:
+        """Abre o programa pelo código (usado pelo mapa). False se não está instalado."""
+        card = next((c for c in self.cards if c.app.key == key), None)
+        if not card or not card.path():
+            return False
+        card._open()
+        return True
+
     def __init__(self, settings: Settings) -> None:
         super().__init__()
         outer = QtWidgets.QVBoxLayout(self)

@@ -14,7 +14,7 @@ Objetivo: uma única estação de radioamador no PC, ligada ao IC-7300.
 - Plano de bandas por país (Brasil, EUA e Canadá com classes e modos; IARU R1/R2/R3 genéricos) e avisos de transmissão
 
 ## Em andamento ou aguardando decisão
-- **Mapa do PSK Reporter** como tela própria (por banda, modo e janela de tempo; o serviço pede no máximo uma consulta a cada 5 minutos).
+- ~~Mapa do PSK Reporter~~ feito (07/11/2026): mapa de estações com PSK Reporter por banda/modo, WSPR, RBN e ações por indicativo. Falta: lista de gateways Winlink no mapa (winlink.org responde 403 a acesso automático; precisa que o usuário baixe a lista), repetidoras (RepeaterBook exige token por usuário).
 - **Repetidoras (RepeaterBook)**: a API exige aprovação do RepeaterBook e um token por usuário (não pode ser embutido no app); sem ele dá para manter listas locais e exportar CSV. O IC-7300 só sintoniza repetidoras de 10 m e 6 m.
 - **Winlink dentro do app**: o VARA não pode ser embutido (modem proprietário). Caminho aberto: embutir o ARDOP (ardopcf, código aberto) e uma camada Winlink (B2F) nativa, ou controlar o Pat.
 
