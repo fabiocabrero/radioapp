@@ -31,6 +31,7 @@ SOURCES = {
     "wspr": "WSPR",
     "rbn": "Reverse Beacon Network",
     "busca": "Busca",
+    "lista": "Lista importada",
 }
 
 
@@ -80,7 +81,7 @@ def mode_family(mode: str, freq: int = 0, info: str = "") -> str:
         return "psk"
     if m in ("SSTV", "ROBOT"):
         return "sstv"
-    if m in ("VARA", "VARA HF", "VARAC", "ARDOP", "PACTOR"):
+    if m in ("VARA", "VARA HF", "VARA FM", "VARAC", "ARDOP", "PACTOR", "PACKET", "ROBUST", "WINLINK"):
         return "winlink"
     if m in ("SSB", "USB", "LSB", "AM", "FM", "PHONE"):
         return "phone"
@@ -247,3 +248,96 @@ def fetch_wspr(seconds: int = 1800, band: Optional[int] = None, timeout: float =
     req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
     with urllib.request.urlopen(req, timeout=timeout) as resp:
         return parse_wspr(json.load(resp))
+
+
+# ---------------------------------------------------------------------------------------------- listas importadas
+# Para fontes que bloqueiam acesso automático (ex.: lista de gateways do Winlink) ou que o usuário baixa em arquivo:
+# o app lê CSV/TSV com cabeçalho ou texto solto (uma estação por linha) e põe as estações no mapa.
+_CALL_RE = re.compile(r"\b[A-Z0-9]{1,2}\d[A-Z]{1,4}(?:-\d{1,2})?\b")
+_GRID_RE = re.compile(r"\b[A-R]{2}\d{2}(?:[A-X]{2})?\b", re.I)
+_MODE_WORDS = ("VARA FM", "VARA HF", "VARA", "ARDOP", "PACTOR", "PACKET", "ROBUST", "WINLINK", "FT8", "FT4", "JS8",
+               "CW", "RTTY", "PSK31", "SSB", "FM", "AM", "D-STAR", "DMR", "C4FM")
+_ALIASES = {
+    "call": ("call", "callsign", "indicativo", "gateway", "station", "sign"),
+    "freq": ("freq", "frequency", "frequencia", "frequência", "output", "dial", "center", "centro", "khz", "mhz"),
+    "mode": ("mode", "modo", "protocol", "protocolo"),
+    "grid": ("grid", "locator", "loc", "gridsquare", "maidenhead"),
+    "lat": ("lat", "latitude"),
+    "lon": ("lon", "lng", "long", "longitude"),
+    "info": ("name", "nome", "city", "cidade", "location", "local", "notes", "obs", "comment", "hours", "horario"),
+}
+
+
+def normalize_freq(value: str, unit_hint: str = "") -> int:
+    """Hz a partir de '7.1015' (MHz), '14101.5' (kHz) ou '14101500' (Hz); 0 se não for número."""
+    try:
+        v = float(value.replace(",", ".").strip())
+    except ValueError:
+        return 0
+    if unit_hint == "khz":
+        return int(round(v * 1e3))
+    if unit_hint == "mhz":
+        return int(round(v * 1e6))
+    if v < 1000:
+        return int(round(v * 1e6))
+    if v < 100_000:
+        return int(round(v * 1e3))
+    return int(round(v))
+
+
+def _find_mode(text: str) -> str:
+    up = text.upper()
+    return next((m for m in _MODE_WORDS if re.search(rf"(?<![A-Z0-9]){re.escape(m)}(?![A-Z0-9])", up)), "")
+
+
+def parse_station_list(text: str, source: str = "lista", default_mode: str = "") -> list[Station]:
+    lines = [ln for ln in text.splitlines() if ln.strip()]
+    if not lines:
+        return []
+    delim = next((d for d in ("\t", ";", ",") if d in lines[0]), "")
+    cols: dict[str, int] = {}
+    if delim:
+        heads = [h.strip().lower() for h in lines[0].split(delim)]
+        for key, names in _ALIASES.items():
+            for i, h in enumerate(heads):
+                if any(h == n or h.startswith(n) for n in names):
+                    cols.setdefault(key, i)
+                    break
+    out: list[Station] = []
+    if "call" in cols:
+        hint = ""
+        if "freq" in cols:
+            h = lines[0].split(delim)[cols["freq"]].lower()
+            hint = "khz" if "khz" in h else ("mhz" if "mhz" in h else "")
+        for ln in lines[1:]:
+            f = [x.strip() for x in ln.split(delim)]
+            get = lambda k: f[cols[k]] if k in cols and cols[k] < len(f) else ""
+            call = get("call").upper()
+            if not _CALL_RE.fullmatch(call):
+                continue
+            st = Station(call, normalize_freq(get("freq"), hint), get("mode").upper() or default_mode, source,
+                         info=get("info"), grid=get("grid"))
+            try:
+                st.lat, st.lon = float(get("lat")), float(get("lon"))
+            except ValueError:
+                pass
+            out.append(st)
+    else:  # texto solto: indicativo, grid, frequência e modo achados na linha
+        for ln in lines:
+            m = _CALL_RE.search(ln.upper())
+            if not m:
+                continue
+            rest = ln.upper().replace(m.group(0), " ", 1)
+            grid = _GRID_RE.search(rest)
+            if grid:
+                rest = rest.replace(grid.group(0), " ", 1)
+            freq = next((normalize_freq(t) for t in re.findall(r"\d+(?:[.,]\d+)?", rest) if normalize_freq(t) >= 100_000), 0)
+            out.append(Station(m.group(0), freq, _find_mode(rest) or default_mode, source, grid=grid.group(0) if grid else "",
+                               info=""))
+    for st in out:
+        if st.grid and st.lat is None:
+            try:
+                st.lat, st.lon = geo.grid_to_latlon(st.grid[:6] if len(st.grid) >= 6 else st.grid[:4])
+            except ValueError:
+                pass
+    return out

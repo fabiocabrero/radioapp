@@ -98,3 +98,17 @@ def test_map_tab_click_and_actions():
     tab._on_stations([Station("DL2NL", 7_040_090, "WSPR", "wspr", 51.4, 6.9)], "wspr")
     assert len(tab.points["wspr"]) == 1
     app.processEvents()
+
+
+def test_parse_station_list_csv_and_text():
+    csv = "Callsign,Frequency (kHz),Mode,Grid,Name\nPY2ABC-10,14101.5,VARA,GG67,Itu\nXX,1,2,3,4\nK1ABC,7101.5,ARDOP,FN31pr,\n"
+    got = stations.parse_station_list(csv)
+    assert [s.call for s in got] == ["PY2ABC-10", "K1ABC"]
+    assert got[0].freq == 14_101_500 and got[0].mode == "VARA" and got[0].lat is not None
+    txt = "PY2ABC-10  GG67  14101.5  VARA HF\nlixo sem nada\nK1ABC FN31 7.1015 ARDOP\n"
+    got = stations.parse_station_list(txt)
+    assert [s.call for s in got] == ["PY2ABC-10", "K1ABC"]
+    assert got[0].freq == 14_101_500 and got[0].mode == "VARA HF" and got[1].freq == 7_101_500
+    assert stations.mode_family("VARA HF") == "winlink"
+    main, _ = keys(got[0])
+    assert "app:varac" in main

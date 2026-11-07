@@ -28,6 +28,7 @@ LAYERS = {
     "psk_band": ("PSK Reporter: atividade na banda", (186, 140, 255)),
     "wspr": ("WSPR (wspr.live)", (255, 105, 180)),
     "rbn": ("Reverse Beacon Network", (255, 90, 90)),
+    "lista": ("Lista importada (gateways etc.)", (0, 230, 200)),
     "busca": ("Indicativo procurado", (255, 255, 255)),
 }
 
@@ -425,6 +426,11 @@ class MapTab(QtWidgets.QWidget):
         g.addWidget(self.btn_band, 1, 0, 1, 4)
         g.addWidget(self.btn_wspr, 2, 0, 1, 4)
         g.addWidget(self.chk_rbn, 3, 0, 1, 4)
+        self.btn_import = QtWidgets.QPushButton("Importar lista de estações (CSV/TXT)…")
+        self.btn_import.setToolTip("Para fontes que você baixa em arquivo, como a lista de gateways do Winlink. "
+                                   "Colunas reconhecidas: indicativo, frequência, modo, grid, lat, lon. Texto solto também funciona.")
+        g.addWidget(self.btn_import, 4, 0, 1, 4)
+        self.btn_import.clicked.connect(self.import_list)
         self.btn_band.clicked.connect(self.refresh_band)
         self.btn_wspr.clicked.connect(self.refresh_wspr)
         self.chk_rbn.toggled.connect(self._toggle_rbn)
@@ -558,6 +564,20 @@ class MapTab(QtWidgets.QWidget):
             self.add_station(layer, st, refresh=False)
         self._refresh_layers()
         self._status.emit(f"{stations.SOURCES[layer]}: {len(self.points[layer])} estações no mapa.")
+
+    def import_list(self) -> None:
+        path, _ = QtWidgets.QFileDialog.getOpenFileName(self, "Lista de estações", "", "Listas (*.csv *.txt *.tsv);;Todos (*)")
+        if not path:
+            return
+        try:
+            text = open(path, encoding="utf-8", errors="replace").read()
+        except OSError as exc:
+            self._status.emit(f"Lista: {exc}")
+            return
+        sts = stations.parse_station_list(text, "lista", self.cb_mode.currentData() or "")
+        self._on_stations(sts, "lista")
+        if not sts:
+            self._status.emit("Lista: nenhuma estação reconhecida no arquivo.")
 
     # Reverse Beacon Network
     def _toggle_rbn(self, on: bool) -> None:
