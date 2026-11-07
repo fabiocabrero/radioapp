@@ -5,7 +5,6 @@ Só recepção: não há gerador de áudio para esses modos nas ferramentas de l
 """
 from __future__ import annotations
 
-import os
 import re
 import subprocess
 import tempfile

@@ -46,7 +46,7 @@ def test_hamqth_parse():
     err = '<HamQTH xmlns="https://www.hamqth.com"><session><error>Callsign not found</error></session></HamQTH>'
     try:
         hamqth.parse_callsign(err)
-        assert False
+        raise AssertionError("deveria falhar")
     except hamqth.HamQTHError as exc:
         assert "not found" in str(exc)
     assert not hamqth.HamQTH().configured

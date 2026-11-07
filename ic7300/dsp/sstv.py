@@ -184,7 +184,7 @@ class SstvDecoder:
         s = _moving(self._f, max(3, int(0.002 * fs)))
         near = np.abs(s - F_LEADER) < 100
         long_runs = [r for r in _runs(near) if r[1] - r[0] >= 0.2 * fs]
-        for (a1, b1), (a2, b2) in zip(long_runs, long_runs[1:]):
+        for (_a1, b1), (a2, b2) in zip(long_runs, long_runs[1:]):
             gap = (a2 - b1) / fs
             if not 0.004 <= gap <= 0.02:
                 continue

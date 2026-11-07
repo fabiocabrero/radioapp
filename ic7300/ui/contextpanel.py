@@ -9,7 +9,7 @@ from typing import Callable, Optional
 
 import numpy as np
 import pyqtgraph as pg
-from PySide6 import QtCore, QtGui, QtWidgets
+from PySide6 import QtCore, QtWidgets
 
 from .. import geo, heatmap, mapdata, propagation, weather
 from ..bands import BandPlan

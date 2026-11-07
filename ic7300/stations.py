@@ -19,7 +19,6 @@ USER_AGENT = "IC7300App/0.1"
 WSPR_URL = "https://db1.wspr.live/"
 RBN_HOST = "telnet.reversebeacon.net"
 RBN_PORT_CW_RTTY = 7000
-RBN_PORT_FT8 = 7001
 
 SOURCES = {
     "spots": "DX Cluster",
@@ -318,7 +317,9 @@ def parse_station_list(text: str, source: str = "lista", default_mode: str = "")
             hint = "khz" if "khz" in h else ("mhz" if "mhz" in h else "")
         for ln in lines[1:]:
             f = [x.strip() for x in ln.split(delim)]
-            get = lambda k: f[cols[k]] if k in cols and cols[k] < len(f) else ""
+            def get(k: str, row: list = f) -> str:
+                return row[cols[k]] if k in cols and cols[k] < len(row) else ""
+
             call = get("call").upper()
             if not _CALL_RE.fullmatch(call):
                 continue

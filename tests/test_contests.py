@@ -1,6 +1,5 @@
 from datetime import datetime, timezone
 
-import pytest
 
 from ic7300 import contests
 from ic7300.logbook import Logbook, Qso, ref_kind

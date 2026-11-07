@@ -15,7 +15,7 @@ from PySide6 import QtCore, QtGui, QtWidgets
 from .. import geo, heatmap, mapdata, propagation, satellites, stations
 from ..bands import BandPlan
 from ..dxcc import Cty
-from ..spots import ClusterClient, Spot, parse_dx_line
+from ..spots import ClusterClient, Spot
 from ..stations import Station
 
 _GRID_WORD = re.compile(r"^[A-R]{2}[0-9]{2}([A-X]{2})?$", re.I)

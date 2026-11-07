@@ -154,7 +154,7 @@ def test_frequency_and_mode_restore_is_optional():
         radio.restore_on_exit = restore
         radio.set_freq(14_074_000)
         radio.set_mode("USB", True, 1)
-        assert wait_for(lambda: sim.freq == 14_074_000 and sim.data == 1)
+        assert wait_for(lambda s=sim: s.freq == 14_074_000 and s.data == 1)
         radio.stop()
         if restore:
             assert (sim.freq, sim.mode, sim.data, sim.filter) == (3_156_000, 2, 0, 2)

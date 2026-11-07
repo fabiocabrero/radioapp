@@ -431,7 +431,6 @@ class SimTransport:
         while not self._closed.wait(0.1):
             if not self._scope_on:
                 continue
-            low, high = self.freq - self._span, self.freq + self._span
             n = civ.SCOPE_POINTS
             t = time.time() - self._t0
             vals = bytearray()

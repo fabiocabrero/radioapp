@@ -4,8 +4,7 @@ from __future__ import annotations
 import threading
 import time
 from datetime import datetime, timezone
-from pathlib import Path
-from typing import Callable, Optional
+from typing import Callable
 
 import numpy as np
 from PySide6 import QtCore, QtGui, QtWidgets

@@ -49,10 +49,6 @@ class Transmitter:
         c = self.down_center
         return c is not None and IC7300_RANGE[0] <= c <= IC7300_RANGE[1]
 
-    @property
-    def voice_or_linear(self) -> bool:
-        return self.kind == "Transponder" or self.mode.upper() in ("FM", "USB", "LSB", "CW", "SSTV")
-
     def label(self) -> str:
         parts = [self.description or self.kind]
         if self.up_center:
