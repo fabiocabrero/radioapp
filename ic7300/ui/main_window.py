@@ -1,6 +1,7 @@
 """Janela principal do app IC-7300."""
 from __future__ import annotations
 
+import socket
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -9,6 +10,7 @@ from typing import Optional
 import numpy as np
 from PySide6 import QtCore, QtGui, QtWidgets
 
+from .. import applog
 from .. import audio as audio_mod
 from .. import civ, geo
 from .. import ft8 as ft8_mod
@@ -18,16 +20,21 @@ from ..dsp.cw_decoder import CwDecoder
 from ..dsp.spectrum import AudioSpectrum
 from ..dxcc import Cty
 from ..logbook import Logbook, Qso, ref_kind
+from .. import rigs
 from ..radio import Radio, RadioState, SerialTransport, SimTransport, list_serial_ports, power_watts, s_meter_text, swr_value
 from ..rigctl import RigctlServer
 from ..settings import Settings
 from ..spots import ClusterClient, Spot, fetch_pota
+from .abouttab import AboutTab
+from .bearingcard import BearingCard
+from .locationdialog import LocationDialog
 from .appmenu import AppMenu
 from .conteststab import ContestsTab
 from .digitaltabs import JtTab, RttyTab
 from .extappstab import ExtAppsTab
 from .protocolstab import ProtocolsTab
 from .sstvtab import SstvTab
+from .voicetab import VoiceTab
 from .. import stations
 from .contextpanel import ContextPanel
 from .maptab import MapTab
@@ -80,6 +87,7 @@ class Bridge(QtCore.QObject):
     ft_rx = QtCore.Signal(object)
     ft_msg = QtCore.Signal(str)
     ft_stop = QtCore.Signal()
+    location = QtCore.Signal(object)
 
 
 class MainWindow(QtWidgets.QMainWindow):
@@ -141,6 +149,17 @@ class MainWindow(QtWidgets.QMainWindow):
         self.sstv = SstvTab(self.settings, lambda: self.state, self._ft_ptt, self._ft_play)
         self.sstv.tune_requested.connect(self._sstv_tune)
         self._add_page("sstv", "SSTV", self.sstv)
+        self.voice = VoiceTab(self.settings, self.cty, lambda: self.state, {
+            "ptt": lambda on: self.radio.set_ptt(on) if self.radio else None,
+            "send_cw": lambda t: self.radio.send_cw(self._expand_macro(t)) if self.radio else None,
+            "stop_cw": lambda: self.radio.stop_cw() if self.radio else None,
+            "connected": lambda: self.radio is not None,
+            "sim": lambda: self.chk_sim.isChecked(),
+            "tx_guard": self._tx_guard,
+            "message": self.bridge.message.emit,
+            "use_call": lambda c: self.ed_call.setText(c)})
+        self.btn_ptt.toggled.connect(self.voice.on_pc_ptt)
+        self._add_page("voice", "Fonia e voz", self.voice)
         self.jt = JtTab(self.settings, self.cty, lambda: self.state)
         self._add_page("wsjt", "FST4 / Q65 / WSPR", self.jt)
         self._add_page("digital", "Frequências digitais", self._tab_digital())
@@ -175,6 +194,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self._add_page("log", "Log", self._tab_log())
         self._add_page("location", "Local / GPS", self._tab_location())
         self._add_page("settings", "Configurações", self._page_settings())
+        self._add_page("about", "Sobre e log", AboutTab())
 
         self.panel = ContextPanel(self.settings, self.cty, self.plan, self.space,
                                   lambda: self.state.freq if self.radio else 0, self._home)
@@ -185,6 +205,16 @@ class MainWindow(QtWidgets.QMainWindow):
         self.splitter.setSizes([1000, 350])
         self.panel.setVisible(self.settings.panel_open)
         self.map.station_selected.connect(self.panel.set_station)
+        self.map.station_selected.connect(self._station_for_bearing)
+        self.ed_call.textChanged.connect(self._refresh_bearing)
+        self.ed_qgrid.textChanged.connect(self._refresh_bearing)
+        for card in (self.bearing_radio, self.bearing_ft):
+            card.message.connect(self.bridge.message.emit)
+            card.ed_rotor.editingFinished.connect(self._sync_rotor)
+        self.bridge.location.connect(self._location_detected)
+        self._picked = None
+        self._gps_prompted = False
+        self._detecting = False
         self.panel.search_requested.connect(self.map.search)
         self.btn_panel.toggled.connect(self._toggle_panel)
         QtCore.QTimer.singleShot(800, self.space.refresh)
@@ -222,6 +252,77 @@ class MainWindow(QtWidgets.QMainWindow):
         s = self.settings
         return (s.lat, s.lon) if (s.lat or s.lon) else None
 
+    # ---- direção da antena ----
+    def _station_for_bearing(self, st) -> None:
+        self._picked = st
+        self._refresh_bearing()
+
+    def _sync_rotor(self) -> None:
+        sender = self.sender()
+        text = sender.text().strip() if sender is not None else self.settings.rotor_host
+        self.settings.rotor_host = text
+        for card in (self.bearing_radio, self.bearing_ft):
+            if card.ed_rotor.text().strip() != text:
+                card.ed_rotor.setText(text)
+
+    def _refresh_bearing(self) -> None:
+        """Atualiza os cards com o alvo: estação escolhida no mapa, grid digitado, ou o centro do país do indicativo."""
+        call = self.ed_call.text().strip().upper()
+        st = self._picked
+        if st is not None and st.lat is not None and (not call or st.call.upper() == call):
+            label, lat, lon, note = st.call, st.lat, st.lon, "Posição da estação no mapa."
+        else:
+            grid = self.ed_qgrid.text().strip()
+            ent = self.cty.lookup(call) if call else None
+            if geo.valid_grid(grid):
+                lat, lon = geo.grid_to_latlon(grid)
+                label, note = f"{call or 'contato'} · {grid.upper()}", "Pelo grid do contato."
+            elif ent:
+                lat, lon = ent.lat, ent.lon
+                label, note = f"{call} · {ent.name}", "Aproximado: centro do país. Informe o grid do contato para mais precisão."
+            else:
+                lat = lon = None
+                label, note = call, ""
+        for card in (self.bearing_radio, self.bearing_ft):
+            card.set_target(label, lat, lon, note)
+
+    # ---- localização: detectar e confirmar ----
+    def _startup_location(self) -> None:
+        if self.settings.loc_confirmed and (self.settings.lat or self.settings.lon):
+            return
+        self._detect_location()
+
+    def _detect_location(self) -> None:
+        """Procura a posição pelo Windows em segundo plano e, com ou sem resultado, pede confirmação ou os dados."""
+        if self._detecting:
+            return
+        self._detecting = True
+        self.statusBar().showMessage("Procurando a localização do computador...", 6000)
+
+        def work() -> None:
+            self.bridge.location.emit(geo.windows_location())
+
+        import threading
+        threading.Thread(target=work, daemon=True).start()
+
+    def _location_detected(self, pos) -> None:
+        self._detecting = False
+        self._ask_location(pos, "serviço de localização do Windows")
+
+    def _ask_location(self, pos, source: str) -> bool:
+        s = self.settings
+        dlg = LocationDialog(self, pos, source, (s.lat, s.lon, s.grid))
+        if not dlg.exec():
+            return False
+        lat, lon, grid = dlg.result_location()
+        self.sp_lat.setValue(lat)
+        self.sp_lon.setValue(lon)
+        self.ed_mygrid.setText(grid)
+        s.loc_confirmed = True
+        self._save_location()
+        self._refresh_bearing()
+        return True
+
     def _toggle_panel(self, on: bool) -> None:
         self.panel.setVisible(on)
         self.settings.panel_open = on
@@ -230,6 +331,7 @@ class MainWindow(QtWidgets.QMainWindow):
     def maybe_first_run(self) -> None:
         if not self.settings.setup_done:
             self._open_wizard()
+        self._startup_location()
 
     def _open_wizard(self) -> None:
         wiz = SetupWizard(self.settings, self)
@@ -238,6 +340,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def _after_wizard(self) -> None:
         s = self.settings
+        if s.lat or s.lon:
+            s.loc_confirmed = True  # o próprio operador informou no assistente
         self.ed_mycall.setText(s.callsign)
         self.ed_mygrid.setText(s.grid)
         self.sp_lat.setValue(s.lat)
@@ -290,6 +394,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def _panic(self) -> None:
         self._ft_halt()
+        self.voice.halt()
         self.rtty._stop()
         self.sstv._stop()
         if self.radio:
@@ -402,6 +507,9 @@ class MainWindow(QtWidgets.QMainWindow):
         root.addLayout(levels)
         self._level_timer = QtCore.QTimer(self, interval=80, singleShot=True, timeout=self._send_levels)
 
+        self.bearing_radio = BearingCard(self._home, self.settings.rotor_host)
+        root.addWidget(self.bearing_radio)
+
         # Espectro + plano de bandas + waterfall
         self.spectrum = SpectrumView(self.plan)
         root.addWidget(self.spectrum, 1)
@@ -411,8 +519,30 @@ class MainWindow(QtWidgets.QMainWindow):
     def _page_settings(self) -> QtWidgets.QWidget:
         page = QtWidgets.QWidget()
         lay = QtWidgets.QVBoxLayout(page)
-        radio_box = QtWidgets.QGroupBox("Rádio (CI-V pela porta USB)")
+        radio_box = QtWidgets.QGroupBox("Rádio")
         form = QtWidgets.QFormLayout(radio_box)
+        self.cb_kind = QtWidgets.QComboBox()
+        for key, text in (("ic7300", "Icom IC-7300 (CI-V nativo, com o scope do rádio)"),
+                          ("hamlib", "Outro rádio: Icom, Yaesu, Kenwood e mais (via Hamlib)"),
+                          ("rigctld", "rigctld já em execução (outro programa ou PC)")):
+            self.cb_kind.addItem(text, key)
+        self.cb_kind.setCurrentIndex(max(0, self.cb_kind.findData(self.settings.rig_kind)))
+        form.addRow("Tipo de rádio", self.cb_kind)
+        self.cb_brand = QtWidgets.QComboBox()
+        self.cb_brand.addItems([*rigs.BRANDS, "Todas as marcas"])
+        self.cb_brand.setCurrentText(self.settings.rig_brand if self.settings.rig_brand in rigs.BRANDS else "Icom")
+        self.cb_model = QtWidgets.QComboBox()
+        self.cb_model.setMinimumWidth(280)
+        self.ed_host = QtWidgets.QLineEdit(self.settings.rig_host)
+        self.lbl_rig = QtWidgets.QLabel("")
+        self.lbl_rig.setWordWrap(True)
+        form.addRow("Marca", self.cb_brand)
+        form.addRow("Modelo", self.cb_model)
+        form.addRow("Endereço do rigctld", self.ed_host)
+        form.addRow("", self.lbl_rig)
+        self._models: list = []
+        self.cb_kind.currentIndexChanged.connect(self._kind_changed)
+        self.cb_brand.currentIndexChanged.connect(self._fill_models)
         self.cb_port = QtWidgets.QComboBox()
         self.cb_port.setMinimumWidth(280)
         self.btn_refresh = QtWidgets.QPushButton("↻  Atualizar lista")
@@ -431,6 +561,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.chk_sim.setChecked(self.settings.simulator)
         form.addRow("", self.chk_sim)
         lay.addWidget(radio_box)
+        self._radio_form = form
+        self._kind_changed()
 
         audio_box = QtWidgets.QGroupBox("Áudio")
         af = QtWidgets.QFormLayout(audio_box)
@@ -557,6 +689,8 @@ class MainWindow(QtWidgets.QMainWindow):
         top.addStretch()
         top.addWidget(self.lbl_slot)
         lay.addLayout(top)
+        self.bearing_ft = BearingCard(self._home, self.settings.rotor_host)
+        lay.addWidget(self.bearing_ft)
         self.tbl_ft = self._table(["UTC", "SNR", "DT", "Freq", "Mensagem", "País"])
         lay.addWidget(self.tbl_ft, 1)
         tx = QtWidgets.QHBoxLayout()
@@ -808,6 +942,8 @@ class MainWindow(QtWidgets.QMainWindow):
         btn_grid = QtWidgets.QPushButton("Grid → lat/lon")
         btn_ll = QtWidgets.QPushButton("Lat/lon → grid")
         btn_save = QtWidgets.QPushButton("Salvar")
+        btn_detect = QtWidgets.QPushButton("Detectar e confirmar localização")
+        btn_detect.clicked.connect(self._detect_location)
         form.addRow("Meu indicativo", self.ed_mycall)
         form.addRow("Grid Maidenhead", self.ed_mygrid)
         form.addRow("Latitude (° , sul negativo)", self.sp_lat)
@@ -827,6 +963,7 @@ class MainWindow(QtWidgets.QMainWindow):
         row.addWidget(btn_ll)
         row.addWidget(btn_save)
         form.addRow(row)
+        form.addRow(btn_detect)
         grow = QtWidgets.QHBoxLayout()
         grow.addWidget(self.cb_gps, 1)
         grow.addWidget(self.btn_gps)
@@ -860,7 +997,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.cb_span.currentIndexChanged.connect(self._span_changed)
         self.bridge.state.connect(self._on_state)
         self.bridge.scope.connect(self._on_scope)
-        self.bridge.message.connect(lambda m: self.statusBar().showMessage(m, 6000))
+        self.bridge.message.connect(lambda m: (applog.log.info(m), self.statusBar().showMessage(m, 6000)))
         self.bridge.audio_row.connect(self._on_audio_row)
         self.bridge.cw_text.connect(self._on_cw_text)
         self.bridge.spot.connect(self._on_spot)
@@ -891,10 +1028,92 @@ class MainWindow(QtWidgets.QMainWindow):
         for n in audio_mod.list_input_devices():
             self.cb_audio.addItem(n, n)
 
+    def _kind_changed(self) -> None:
+        kind = self.cb_kind.currentData()
+        form = self._radio_form
+        for widget, visible in ((self.cb_brand, kind == "hamlib"), (self.cb_model, kind == "hamlib"),
+                                (self.ed_host, kind == "rigctld"), (self.ed_addr, kind == "ic7300"),
+                                (self.chk_sim, kind == "ic7300"), (self.lbl_rig, kind != "ic7300")):
+            form.setRowVisible(widget, visible)
+        self.cb_port.setEnabled(kind != "rigctld")
+        if kind == "hamlib" and not self._models:
+            exe = rigs.find_rigctld((self.settings.wsjtx_dir,) if self.settings.wsjtx_dir else ())
+            self._models = rigs.list_models(exe) if exe else []
+            self.lbl_rig.setText(f"Hamlib: {exe} ({len(self._models)} modelos)" if self._models else
+                                 "Não encontrei o rigctld do Hamlib. Instale o WSJT-X (ele o traz) ou o Hamlib e volte aqui.")
+            self._fill_models()
+        elif kind == "rigctld":
+            self.lbl_rig.setText("Use quando outro programa já controla o rádio e oferece o rigctld (ex.: 127.0.0.1:4532).")
+        elif kind == "ic7300":
+            self.lbl_rig.setText("")
+
+    def _fill_models(self) -> None:
+        brand = self.cb_brand.currentText()
+        self.cb_model.clear()
+        for m in self._models:
+            if brand == "Todas as marcas" or m.brand == brand:
+                self.cb_model.addItem(m.label, m.number)
+        i = self.cb_model.findData(self.settings.rig_model)
+        if i >= 0:
+            self.cb_model.setCurrentIndex(i)
+
+    def _build_rig(self, kind: str):
+        """Cria o rádio escolhido (Hamlib ou rigctld existente); levanta RuntimeError com mensagem clara."""
+        if kind == "rigctld":
+            host, _, port = self.ed_host.text().strip().partition(":")
+            if not port.isdigit():
+                raise RuntimeError("Informe o endereço do rigctld como host:porta (ex.: 127.0.0.1:4533).")
+            self.settings.rig_host = self.ed_host.text().strip()
+            return rigs.HamlibRig(host or "127.0.0.1", int(port))
+        model = self.cb_model.currentData()
+        if not model:
+            raise RuntimeError("Escolha a marca e o modelo do rádio.")
+        exe = rigs.find_rigctld((self.settings.wsjtx_dir,) if self.settings.wsjtx_dir else ())
+        if not exe:
+            raise RuntimeError("Não encontrei o rigctld do Hamlib. Instale o WSJT-X (ele o traz) ou o Hamlib.")
+        port = self.cb_port.currentData() or ""
+        if not port and model not in (1, 6):  # 1 e 6: rádios de teste do Hamlib, sem porta
+            raise RuntimeError("Selecione a porta serial do rádio.")
+        with socket.socket() as s:
+            s.bind(("127.0.0.1", 0))
+            tcp = s.getsockname()[1]
+        self.settings.rig_model = int(model)
+        self.settings.rig_brand = self.cb_brand.currentText()
+        return rigs.HamlibRig("127.0.0.1", tcp, rigs.RigctldProcess(exe, int(model), port, int(self.cb_baud.currentText()), tcp))
+
     def _toggle_connect(self) -> None:
         if self.radio:
             self._disconnect()
             return
+        kind = self.cb_kind.currentData()
+        if kind != "ic7300":
+            self.chk_sim.setChecked(False)  # o simulador é do IC-7300 nativo
+            self.settings.rig_kind = kind
+            try:
+                self.radio = self._build_rig(kind)
+                self.radio.on_state = self.bridge.state.emit
+                self.radio.on_scope = self.bridge.scope.emit
+                self.radio.on_message = self.bridge.message.emit
+                self.radio.restore_on_exit = self.chk_restore.isChecked()
+                applog.log.info("Conectando via Hamlib: %s", kind)
+                self.radio.start()
+            except Exception as exc:  # noqa: BLE001
+                applog.log.error("Conexão Hamlib: %s", exc)
+                if self.radio:
+                    try:
+                        self.radio.stop()
+                    except Exception:  # noqa: BLE001
+                        pass
+                self.radio = None
+                QtWidgets.QMessageBox.warning(self, "Conexão", str(exc))
+                return
+            self.settings.port = self.cb_port.currentData() or ""
+            self.settings.baud = int(self.cb_baud.currentText())
+            self.settings.save()
+            self._start_audio()
+            self.btn_connect.setText("Desconectar")
+            return
+        self.settings.rig_kind = "ic7300"
         try:
             if self.chk_sim.isChecked():
                 transport = SimTransport()
@@ -905,6 +1124,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 transport = SerialTransport(port, int(self.cb_baud.currentText()))
             addr = int(self.ed_addr.text(), 16)
         except Exception as exc:
+            applog.log.error("Conexão: %s", exc)
             QtWidgets.QMessageBox.warning(self, "Conexão", str(exc))
             return
         self.settings.simulator = self.chk_sim.isChecked()
@@ -912,6 +1132,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.settings.baud = int(self.cb_baud.currentText())
         self.settings.civ_address = addr
         self.settings.save()
+        applog.log.info("Conectando: %s, %s baud, endereço %02Xh", type(transport).__name__, self.cb_baud.currentText(), addr)
         self.radio = Radio(transport, address=addr)
         self.radio.on_state = self.bridge.state.emit
         self.radio.on_scope = self.bridge.scope.emit
@@ -984,6 +1205,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.rtty.feed(samples)
             self.sstv.feed(samples)
             self.jt.feed(samples)
+        self.voice.feed(samples)
         row = self.audio_spec.push(samples)
         now = time.time()
         if row is not None and now - self._last_audio_row > 0.08:
@@ -993,6 +1215,7 @@ class MainWindow(QtWidgets.QMainWindow):
     # ---------------------------------------------------------------- eventos
     def _on_state(self, st: RadioState) -> None:
         self.state = st
+        self.voice.on_radio_state(st)
         self._update_header(st)
         self.freq_disp.set_freq(st.freq)
         self.spectrum.set_freq(st.freq)
@@ -1467,6 +1690,7 @@ class MainWindow(QtWidgets.QMainWindow):
         s.callsign = self.ed_mycall.text().strip().upper()
         s.grid = self.ed_mygrid.text().strip()
         s.lat, s.lon = self.sp_lat.value(), self.sp_lon.value()
+        s.loc_confirmed = bool(s.lat or s.lon)
         s.band_plan = self.cb_plan.currentData()
         s.classes_by_plan[self._preview_plan()] = self.cb_class.currentData() or ""
         s.save()
@@ -1497,6 +1721,15 @@ class MainWindow(QtWidgets.QMainWindow):
 
     @QtCore.Slot(float, float)
     def _apply_fix(self, lat: float, lon: float) -> None:
+        s = self.settings
+        near = (s.lat or s.lon) and geo.distance_bearing(s.lat, s.lon, lat, lon)[0] < 1.0
+        if not near and not self._gps_prompted:
+            self._gps_prompted = True  # pergunta uma vez por sessão
+            if self._ask_location((lat, lon), "GPS"):
+                self.lbl_gps.setText(f"Posição do GPS confirmada: {lat:.5f}, {lon:.5f}")
+            return
+        if not s.loc_confirmed and not near:
+            return
         self.sp_lat.setValue(lat)
         self.sp_lon.setValue(lon)
         self.ed_mygrid.setText(geo.latlon_to_grid(lat, lon))
@@ -1513,6 +1746,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.lbl_grid.setText(f"{s.callsign or 'sem indicativo'}  {s.grid}")
 
     def closeEvent(self, e: QtGui.QCloseEvent) -> None:
+        applog.log.info("Encerrando")
+        self.voice.shutdown()
         self._disconnect()
         if self.cluster:
             self.cluster.stop()

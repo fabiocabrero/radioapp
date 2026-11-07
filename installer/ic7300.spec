@@ -1,12 +1,22 @@
 # PyInstaller: pasta autocontida com o app (Python, PySide6, numpy, dados e ft8.dll). Uso: python installer/build.py
 from pathlib import Path
 
+from PyInstaller.utils.hooks import collect_all
+
+# vosk (reconhecimento offline do indicativo falado) é opcional: entra no instalador se estiver instalado
+try:
+    vosk_datas, vosk_bins, vosk_hidden = collect_all("vosk")
+except Exception:  # noqa: BLE001
+    vosk_datas, vosk_bins, vosk_hidden = [], [], []
+
 root = Path(SPECPATH).parent  # noqa: F821  (SPECPATH é definido pelo PyInstaller)
 
 a = Analysis(
     [str(root / "ic7300_station.py")],
     pathex=[str(root)],
-    datas=[(str(root / "ic7300" / "data"), "ic7300/data"), (str(root / "ic7300" / "native" / "ft8.dll"), "ic7300/native")],
+    datas=[(str(root / "ic7300" / "data"), "ic7300/data"), (str(root / "ic7300" / "native" / "ft8.dll"), "ic7300/native")] + vosk_datas,
+    binaries=vosk_bins,
+    hiddenimports=vosk_hidden,
     excludes=["tkinter", "matplotlib", "scipy", "pandas", "IPython", "pytest", "ruff", "vulture", "PyInstaller",
               "PySide6.QtWebEngineCore", "PySide6.QtWebEngineWidgets", "PySide6.QtQml", "PySide6.QtQuick", "PySide6.Qt3DCore",
               "PySide6.QtMultimedia", "PySide6.QtPdf", "PySide6.QtCharts", "PySide6.QtDataVisualization"],

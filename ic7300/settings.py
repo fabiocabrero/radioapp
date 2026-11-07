@@ -51,6 +51,13 @@ class Settings:
     op_city: str = ""
     setup_done: bool = False
     cabrillo: dict = field(default_factory=dict)
+    rig_kind: str = "ic7300"   # ic7300 (CI-V nativo), hamlib (qualquer modelo) ou rigctld (já em execução)
+    rig_model: int = 0
+    rig_brand: str = "Icom"
+    rig_host: str = "127.0.0.1:4533"
+    loc_confirmed: bool = False  # o operador confirmou a localização (detectada ou digitada)
+    rotor_host: str = ""         # rotctld do Hamlib (host:porta) para girar a antena
+    voice_cfg: dict = field(default_factory=dict)  # tela Fonia: dispositivos, efeitos e chamadas
 
     @classmethod
     def load(cls) -> "Settings":

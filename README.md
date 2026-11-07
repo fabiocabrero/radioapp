@@ -3,6 +3,19 @@
 App para Windows que controla o Icom IC-7300 pelo cabo USB (CI-V + áudio), com recursos inspirados no
 firmware OpenX6100 do Xiegu X6100. O IC-7300 não aceita firmware de terceiros, por isso a solução roda no PC.
 
+## Proposta
+
+Um app **de radioamadores, para radioamadores, aberto e completo**: centraliza as informações e elimina as longas buscas em sopas de letrinhas (VARA, ARDOP, FST4, ACDS, D-RAP...) e a instalação e o uso de um aplicativo para cada coisa. Veja também **Apps > Sobre e log** dentro do programa.
+
+## Rádios compatíveis
+
+- **Icom IC-7300**: CI-V nativo, com o scope do rádio (validado só em recepção).
+- **Qualquer outro rádio (Icom, Yaesu, Kenwood e mais de 300 modelos)** pelo **Hamlib**: em *Apps > Configurações > Rádio* escolha
+  *Outro rádio*, a marca e o modelo; o app encontra o `rigctld` (o do WSJT-X serve), lista os modelos e o inicia sozinho. Também conecta a um
+  `rigctld` que já esteja rodando. Pelo Hamlib o espectro vem do áudio recebido (o scope só existe no IC-7300 nativo).
+  Testado contra o `rigctld` real do Hamlib 4.6.1 com o rádio de teste (frequência, modo, DATA, PTT, volume), **não** testado com rádios Yaesu, Kenwood ou outros Icom de verdade.
+  Dependem do modelo: CW pelo manipulador do rádio, medidores (S, potência, ROE) e os níveis.
+
 ## Executar
 
 ```
@@ -39,6 +52,9 @@ Marque **Simulador** para testar sem o rádio. Para o rádio real: no menu do IC
 - **RTTY** (nativo): recepção e transmissão em AFSK (45,45/50/75/100 baud, marca e shift ajustáveis, REV, UOS), validado por ida e volta com ruído
 - **FST4, Q65, JT65, JT9 e WSPR** (só recepção): usa o `jt9.exe` e o `wsprd.exe` do WSJT-X instalado no PC, em slots alinhados ao relógio UTC. FST4 e Q65 foram validados com os simuladores do WSJT-X; JT65, JT9 e WSPR (marcados com *) usam o mesmo caminho, mas não foram validados com sinais reais
 - **SSTV** (nativo): recepção contínua de Martin M1/M2 e Scottie S1/S2 com detecção do código VIS, correção da deriva de relógio por sincronismo de linha e imagens salvas numa galeria; transmissão de uma imagem (escolhida no PC) com legenda "CQ CQ SSTV" e seu indicativo; frequências de chamada para sintonizar com um clique. Validado por ida e volta (erro médio de 0,8 em 255 sem ruído; 300 ppm de deriva toleradas), **não** testado contra outros programas de SSTV (MMSSTV, QSSTV) nem no ar
+- **Fonia e voz**: efeitos de áudio (compressão, presença, corte de graves, porta de ruído, eco, reverb) para o seu microfone (TX) e para o áudio recebido (RX), com predefinidos; teste nos fones sem transmitir; gravação das conversas (manual ou ao detectar voz); mensagens gravadas em voz e CW; chamadas automáticas com intervalo regulável, escuta do canal entre uma chamada e outra e interrupção ao detectar voz; o PTT do operador (app ou rádio) suspende as chamadas e pergunta se retoma; identificação opcional e offline do indicativo falado (Vosk, alfabeto fonético, validação pelo prefixo no cty.dat). TX nunca testado no ar
+- **Localização confirmada e direção da antena**: o app detecta a posição pelo Windows (ou GPS NMEA) e **sempre pede confirmação**; sem detecção, pede coordenadas ou grid locator. O card **Direção da antena** (tela do Rádio e FT8/FT4) mostra o azimute em graus, o caminho curto e o longo e a distância ao contato para apontar antenas direcionais, e gira o rotor pelo `rotctld` do Hamlib (rotor ainda não testado de verdade)
+- **Sobre e log**: proposta do projeto, fontes de dados, estado dos testes e registro de eventos (`%APPDATA%\IC7300App\logs\ic7300.log`, rotativo, sem senhas) para anexar a relatos de problema
 - Local: grid Maidenhead, lat/lon, GPS NMEA
 - Log com exportação ADIF, DX Cluster (telnet) e spots POTA
 

@@ -7,7 +7,7 @@
 AppId={{6B2F5E1E-7C0A-4B0D-9E75-1C7300A5710A}
 AppName=IC-7300 Station
 AppVersion={#AppVersion}
-AppPublisher=Fabio Cabrero (PY2XX)
+AppPublisher=Fabio Cabrero (PR2FAB)
 AppPublisherURL=https://github.com/fabiocabrero/radioapp
 DefaultDirName={autopf}\IC7300 Station
 DefaultGroupName=IC-7300 Station

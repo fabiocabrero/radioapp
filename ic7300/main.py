@@ -3,6 +3,7 @@ import time
 
 from PySide6 import QtCore, QtWidgets
 
+from . import applog
 from .ui.main_window import MainWindow
 
 
@@ -38,6 +39,7 @@ def main() -> int:
     app.setStyle("Fusion")
     if "--selftest" in sys.argv:
         return selftest(app, sys.argv[sys.argv.index("--selftest") + 1])
+    applog.setup()
     win = MainWindow()
     win.show()
     QtCore.QTimer.singleShot(800, win.maybe_first_run)

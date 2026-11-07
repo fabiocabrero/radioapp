@@ -4,3 +4,6 @@ numpy
 pyserial
 sounddevice
 pytest
+
+# opcional: identificação de indicativo pela voz (offline)
+# vosk

@@ -63,6 +63,41 @@ def distance_bearing(lat1: float, lon1: float, lat2: float, lon2: float) -> tupl
     return dist, (math.degrees(math.atan2(y, x)) + 360) % 360
 
 
+_COMPASS = ("N", "NNE", "NE", "ENE", "L", "ESE", "SE", "SSE", "S", "SSO", "SO", "OSO", "O", "ONO", "NO", "NNO")
+
+
+def compass(az: float) -> str:
+    """Ponto cardeal (16 rumos, em português: L = leste, O = oeste) de um azimute em graus."""
+    return _COMPASS[int((az % 360) / 22.5 + 0.5) % 16]
+
+
+def bearing_info(lat1: float, lon1: float, lat2: float, lon2: float) -> dict:
+    """Caminho curto e longo até o contato: o longo é a direção oposta, percorrendo o restante da circunferência (40 030 km)."""
+    km, az = distance_bearing(lat1, lon1, lat2, lon2)
+    return {"short_km": km, "short_az": az, "long_km": max(0.0, 40030.0 - km), "long_az": (az + 180.0) % 360.0}
+
+
+def windows_location(timeout: float = 12.0) -> Optional[tuple[float, float]]:
+    """Posição pelo serviço de localização do Windows (GPS interno, Wi-Fi ou IP). None se indisponível ou negada."""
+    import os
+    import subprocess
+
+    if os.name != "nt":
+        return None
+    script = ("Add-Type -AssemblyName System.Device;"
+              "$w = New-Object System.Device.Location.GeoCoordinateWatcher([System.Device.Location.GeoPositionAccuracy]::Default);"
+              "$null = $w.TryStart($false, [TimeSpan]::FromSeconds(8));"
+              "$c = $w.Position.Location;"
+              "if ($c.IsUnknown) { 'unknown' } else { [string]::Format([Globalization.CultureInfo]::InvariantCulture, '{0} {1}', $c.Latitude, $c.Longitude) }")
+    try:
+        out = subprocess.run(["powershell", "-NoProfile", "-NonInteractive", "-Command", script], capture_output=True, text=True,
+                             timeout=timeout, creationflags=0x08000000).stdout.strip()
+        lat, lon = (float(v) for v in out.split())
+    except (OSError, ValueError, subprocess.SubprocessError):
+        return None
+    return (lat, lon) if -90 <= lat <= 90 and -180 <= lon <= 180 and (lat or lon) else None
+
+
 def _nmea_deg(value: str, hemi: str) -> float:
     dot = value.index(".")
     deg = float(value[: dot - 2]) + float(value[dot - 2:]) / 60

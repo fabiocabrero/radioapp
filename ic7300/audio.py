@@ -76,6 +76,21 @@ def play_blocking(samples: np.ndarray, device: str) -> None:
     sd.wait()
 
 
+def play_chunked(samples: np.ndarray, device: str, should_stop: Callable[[], bool], chunk: int = 2400) -> bool:
+    """Toca em trechos de 50 ms e consulta `should_stop` entre eles. Retorna False se interrompido."""
+    import sounddevice as sd
+
+    mono = samples.astype(np.float32)
+    with sd.OutputStream(device=resolve_device(device, "output"), channels=2, samplerate=FS, blocksize=chunk) as stream:
+        for i in range(0, len(mono), chunk):
+            if should_stop():
+                stream.abort()
+                return False
+            blk = mono[i:i + chunk]
+            stream.write(np.column_stack([blk, blk]))
+    return True
+
+
 def stop_playback() -> None:
     import sounddevice as sd
 

@@ -21,6 +21,7 @@ SECTIONS: tuple[tuple[str, tuple[AppEntry, ...]], ...] = (
     ("Modos", (
         AppEntry("cw", "〰", "CW", "Decodificador e manipulador"),
         AppEntry("ft8", "🛰", "FT8 / FT4", "Decodificar e transmitir"),
+        AppEntry("voice", "🎙", "Fonia e voz", "Efeitos, gravação e chamadas automáticas"),
         AppEntry("rtty", "⌨", "RTTY", "AFSK 45 a 100 baud"),
         AppEntry("sstv", "🖼", "SSTV", "Martin e Scottie, imagens"),
         AppEntry("wsjt", "📶", "FST4 / Q65 / WSPR", "Recepção pelo motor do WSJT-X"),
@@ -44,6 +45,7 @@ SECTIONS: tuple[tuple[str, tuple[AppEntry, ...]], ...] = (
         AppEntry("setup", "🧰", "Assistente", "Dados, programas de terceiros e instruções"),
         AppEntry("location", "📍", "Local / GPS", "Indicativo, grid, classe e plano"),
         AppEntry("settings", "⚙", "Configurações", "Porta, áudio e integrações"),
+        AppEntry("about", "ℹ", "Sobre e log", "Proposta do projeto e registro de eventos"),
     )),
 )
 
