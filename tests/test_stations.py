@@ -112,3 +112,20 @@ def test_parse_station_list_csv_and_text():
     assert stations.mode_family("VARA HF") == "winlink"
     main, _ = keys(got[0])
     assert "app:varac" in main
+
+
+def test_parse_wwff():
+    now = 1_794_050_900
+    payload = [
+        {"activator": "YU7RQ", "frequency_khz": 14061, "mode": "cw", "reference": "YUFF-0025", "reference_name": "Tikvara",
+         "remarks": "Re-spotted via RBN", "spotter": "EI4HQ", "latitude": 45.2, "longitude": 19.3, "spot_time": now - 60},
+        {"activator": "YU7RQ", "frequency_khz": 7030, "mode": "CW", "reference": "YUFF-0025", "spot_time": now - 600,
+         "latitude": 45.2, "longitude": 19.3},
+        {"activator": "OLD", "frequency_khz": 7100, "mode": "SSB", "reference": "X", "spot_time": now - 99999,
+         "latitude": 1, "longitude": 1},
+        {"broken": True}]
+    got = stations.parse_wwff(payload, now=now)
+    assert [s.call for s in got] == ["YU7RQ"] and got[0].freq == 14_061_000 and got[0].mode == "CW"
+    assert got[0].ref == "YUFF-0025" and got[0].source == "wwff"
+    main, _ = keys(got[0])
+    assert "pota" in main and "page:cw" in main

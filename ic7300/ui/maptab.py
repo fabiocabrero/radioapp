@@ -25,6 +25,7 @@ LAYERS = {
     "ft8": ("Estações FT8/FT4 decodificadas", (120, 200, 255)),
     "psk_tx": ("PSK Reporter: quem me ouve", (90, 220, 120)),
     "psk_rx": ("PSK Reporter: quem eu ouço", (255, 140, 60)),
+    "wwff": ("WWFF: ativações no ar", (110, 220, 110)),
     "psk_band": ("PSK Reporter: atividade na banda", (186, 140, 255)),
     "wspr": ("WSPR (wspr.live)", (255, 105, 180)),
     "rbn": ("Reverse Beacon Network", (255, 90, 90)),
@@ -62,6 +63,7 @@ class MapTab(QtWidgets.QWidget):
         self._psk_last = 0.0
         self.dial = None  # função que devolve a frequência do rádio (Hz); definida pela janela principal
         self._wspr_last = 0.0
+        self._wwff_last = 0.0
         self.rbn: Optional[ClusterClient] = None
         self.selected: Optional[Station] = None
 
@@ -426,6 +428,9 @@ class MapTab(QtWidgets.QWidget):
         g.addWidget(self.btn_band, 1, 0, 1, 4)
         g.addWidget(self.btn_wspr, 2, 0, 1, 4)
         g.addWidget(self.chk_rbn, 3, 0, 1, 4)
+        self.btn_wwff = QtWidgets.QPushButton("WWFF agora (parques e florestas)")
+        g.addWidget(self.btn_wwff, 5, 0, 1, 4)
+        self.btn_wwff.clicked.connect(self.refresh_wwff)
         self.btn_import = QtWidgets.QPushButton("Importar lista de estações (CSV/TXT)…")
         self.btn_import.setToolTip("Para fontes que você baixa em arquivo, como a lista de gateways do Winlink. "
                                    "Colunas reconhecidas: indicativo, frequência, modo, grid, lat, lon. Texto solto também funciona.")
@@ -564,6 +569,21 @@ class MapTab(QtWidgets.QWidget):
             self.add_station(layer, st, refresh=False)
         self._refresh_layers()
         self._status.emit(f"{stations.SOURCES[layer]}: {len(self.points[layer])} estações no mapa.")
+
+    def refresh_wwff(self) -> None:
+        if time.time() - self._wwff_last < 30:
+            self._status.emit("WWFF: aguarde 30 s entre consultas (regra do Spotline).")
+            return
+        self._wwff_last = time.time()
+
+        def work() -> None:
+            try:
+                self._band_ready.emit(stations.fetch_wwff(), "wwff")
+            except Exception as exc:
+                self._status.emit(f"WWFF: {exc}")
+
+        self._status.emit("WWFF: consultando…")
+        threading.Thread(target=work, daemon=True).start()
 
     def import_list(self) -> None:
         path, _ = QtWidgets.QFileDialog.getOpenFileName(self, "Lista de estações", "", "Listas (*.csv *.txt *.tsv);;Todos (*)")

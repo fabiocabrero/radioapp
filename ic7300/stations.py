@@ -24,6 +24,7 @@ RBN_PORT_FT8 = 7001
 SOURCES = {
     "spots": "DX Cluster",
     "pota": "POTA",
+    "wwff": "WWFF",
     "ft8": "Decodificado aqui",
     "psk_tx": "PSK Reporter: me ouvem",
     "psk_rx": "PSK Reporter: eu ouço",
@@ -156,8 +157,8 @@ def actions_for(st: Station) -> tuple[list[Action], list[Action]]:
     main = list(_FAMILY_ACTIONS.get(family, _FAMILY_ACTIONS["unknown"]))
     if st.freq and family not in ("phone", "data", "unknown") and not any(a.key == "tune" for a in main):
         main.append(Action("tune", "Só sintonizar o rádio"))
-    if st.source == "pota" and st.ref:
-        main.append(Action("pota", f"Marcar {st.ref} para o log", "guarda a referência POTA no log"))
+    if st.source in ("pota", "wwff") and st.ref:
+        main.append(Action("pota", f"Marcar {st.ref} para o log", "guarda a referência no log"))
     if not st.freq:  # sem frequência (busca por indicativo): só as ferramentas de conexão
         main = []
     used = {a.key for a in main}
@@ -341,3 +342,35 @@ def parse_station_list(text: str, source: str = "lista", default_mode: str = "")
             except ValueError:
                 pass
     return out
+
+
+# ---------------------------------------------------------------------------------------------- WWFF
+WWFF_URL = "https://spots.wwff.co/static/spots.json"
+WWFF_AGENT = "IC7300App/0.1 (+https://github.com/fabiocabrero/radioapp)"  # a WWFF pede User-Agent descritivo com contato
+
+
+def parse_wwff(payload: list, max_age_s: int = 3600, now: Optional[float] = None) -> list[Station]:
+    """Spots recentes do WWFF (uma estação por ativador, o mais novo)."""
+    now = now or time.time()
+    seen: dict[str, Station] = {}
+    for s in payload:
+        try:
+            call = s["activator"]
+            stamp = float(s["spot_time"])
+            if now - stamp > max_age_s or call in seen:
+                continue
+            ref = s.get("reference", "")
+            seen[call] = Station(call, int(round(float(s["frequency_khz"]) * 1000)), (s.get("mode") or "").upper(), "wwff",
+                                 s.get("latitude"), s.get("longitude"),
+                                 info=f"{ref} {s.get('reference_name', '')}".strip() + (f" · {s['remarks']}" if s.get("remarks") else ""),
+                                 spotter=s.get("spotter", ""), ref=ref, stamp=stamp)
+        except (KeyError, ValueError, TypeError):
+            continue
+    return list(seen.values())
+
+
+def fetch_wwff(timeout: float = 20) -> list[Station]:
+    """Spots do WWFF Spotline (leitura pública sem chave; no máximo 1 consulta a cada 30 s)."""
+    req = urllib.request.Request(WWFF_URL, headers={"User-Agent": WWFF_AGENT})
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        return parse_wwff(json.load(resp))
