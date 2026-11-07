@@ -78,3 +78,11 @@ Testado com o cliente Hamlib 4 que acompanha o WSJT-X (frequência, modo, PTT, n
 - Ainda não embutidos: JS8, WSPR, Winlink/ARDOP, SSTV, NAVTEX e CW trainer (veja ROADMAP.md).
 - FT8/FT4 decodificam e transmitem pelo app (ft8_lib, MIT). **A transmissão nunca foi testada com um rádio real**: teste primeiro numa carga fantasma, com o ALC sem acionar. O relógio do PC precisa estar sincronizado (NTP).
 - `ic7300/native/ft8.dll` é gerada por `python build_native.py` (precisa de `pip install ziglang`, só para desenvolver).
+
+## Instalador para Windows
+
+`installer/Output/IC7300Station-Setup-<versão>.exe` instala o app (Python, bibliotecas, dados e `ft8.dll` já dentro; não precisa instalar Python). Para gerar de novo: `pip install pyinstaller`, instalar o Inno Setup 6 (`winget install JRSoftware.InnoSetup`) e rodar `python installer/build.py`. O executável também aceita `--selftest <arquivo>` (abre a janela com o simulador, percorre as telas e grava OK ou o erro).
+
+Na primeira execução abre o **Assistente de primeiros passos** (depois, em Apps > Assistente): pergunta indicativo, nome, cidade, grid e posição, a porta COM e o áudio do IC-7300; instala os programas de terceiros que você marcar e gera, para cada um (WSJT-X, JS8Call, Fldigi, Winlink Express, Pat, VARA, VarAC, FreeDV, MMSSTV, N1MM), as instruções de configuração com os seus dados (e permite salvar tudo em HTML). Nada de terceiros é redistribuído: o `winget` baixa do site do autor e confere o hash (WSJT-X, JS8Call, Fldigi, Winlink Express e FreeDV); Pat, VARA, VarAC, MMSSTV e N1MM abrem a página oficial. Senhas (Winlink, HamQTH) nunca vão para as instruções.
+
+Ao desinstalar, as configurações e o log em `%APPDATA%\IC7300App` são mantidos.

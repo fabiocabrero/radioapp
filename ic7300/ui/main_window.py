@@ -32,6 +32,7 @@ from .. import stations
 from .contextpanel import ContextPanel
 from .maptab import MapTab
 from .satellitestab import SatellitesTab
+from .setupwizard import SetupWizard
 from .spacedata import SpaceData
 from .potatab import PotaTab
 from .swltab import SwlTab
@@ -206,6 +207,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.stack.addWidget(widget)
 
     def show_page(self, key: str) -> None:
+        if key == "setup":
+            self._open_wizard()
+            return
         if key not in self.pages:
             return
         self._current_page = key
@@ -222,6 +226,27 @@ class MainWindow(QtWidgets.QMainWindow):
         self.panel.setVisible(on)
         self.settings.panel_open = on
         self.settings.save()
+
+    def maybe_first_run(self) -> None:
+        if not self.settings.setup_done:
+            self._open_wizard()
+
+    def _open_wizard(self) -> None:
+        wiz = SetupWizard(self.settings, self)
+        if wiz.exec():
+            self._after_wizard()
+
+    def _after_wizard(self) -> None:
+        s = self.settings
+        self.ed_mycall.setText(s.callsign)
+        self.ed_mygrid.setText(s.grid)
+        self.sp_lat.setValue(s.lat)
+        self.sp_lon.setValue(s.lon)
+        self._save_location()
+        self._refresh_ports()
+        self.chk_rigctl.setChecked(s.rigctl_enabled)
+        if s.port:
+            self.chk_sim.setChecked(False)
 
     def _go_back(self) -> None:
         self.show_page("apps" if self._current_page not in ("apps", "radio") else "radio")

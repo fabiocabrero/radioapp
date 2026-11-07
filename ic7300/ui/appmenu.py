@@ -41,6 +41,7 @@ SECTIONS: tuple[tuple[str, tuple[AppEntry, ...]], ...] = (
         AppEntry("log", "📒", "Log", "QSOs, referências e ADIF"),
     )),
     ("Sistema", (
+        AppEntry("setup", "🧰", "Assistente", "Dados, programas de terceiros e instruções"),
         AppEntry("location", "📍", "Local / GPS", "Indicativo, grid, classe e plano"),
         AppEntry("settings", "⚙", "Configurações", "Porta, áudio e integrações"),
     )),

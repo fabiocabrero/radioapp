@@ -47,6 +47,9 @@ class Settings:
     hamqth_user: str = ""
     hamqth_pass: str = ""  # guardada em texto no perfil local do usuário
     panel_open: bool = True
+    op_name: str = ""
+    op_city: str = ""
+    setup_done: bool = False
     cabrillo: dict = field(default_factory=dict)
 
     @classmethod

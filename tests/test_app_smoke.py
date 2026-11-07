@@ -44,7 +44,7 @@ def test_all_pages_and_actions(monkeypatch):
         pump(app, 1.5)
         assert w.radio is not None
         keys = [e.key for _, entries in SECTIONS for e in entries]
-        assert set(keys) <= set(w.pages), set(keys) - set(w.pages)
+        assert set(keys) - {"setup"} <= set(w.pages), set(keys) - set(w.pages)
         for key in list(w.pages):
             w.show_page(key)
             pump(app, 0.15)
