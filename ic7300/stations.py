@@ -33,6 +33,7 @@ SOURCES = {
     "rbn": "Reverse Beacon Network",
     "busca": "Busca",
     "lista": "Lista importada",
+    "sat": "Satélite amador (posição aproximada)",
 }
 
 
@@ -145,6 +146,8 @@ CONNECT_APPS: tuple[Action, ...] = (
 )
 
 WEB_ACTIONS: tuple[Action, ...] = (
+    Action("web:kiwi", "Ouvir num SDR público (KiwiSDR)", "abre o mapa de receptores KiwiSDR no navegador"),
+    Action("web:websdr", "Ouvir num WebSDR", "abre o diretório WebSDR no navegador"),
     Action("web:qrz", "Ver no QRZ.com"),
     Action("web:hamqth", "Ver no HamQTH"),
     Action("web:psk", "Ver no PSK Reporter"),
@@ -153,6 +156,8 @@ WEB_ACTIONS: tuple[Action, ...] = (
 
 def actions_for(st: Station) -> tuple[list[Action], list[Action]]:
     """(principais, outras) para a estação. Principais dependem do modo; outras são as ferramentas gerais."""
+    if st.source == "sat":
+        return [], [Action("web:amsat", "Status dos satélites (AMSAT)"), Action("copy", "Copiar nome")]
     family = mode_family(st.mode, st.freq, st.info)
     main = list(_FAMILY_ACTIONS.get(family, _FAMILY_ACTIONS["unknown"]))
     if st.freq and family not in ("phone", "data", "unknown") and not any(a.key == "tune" for a in main):
@@ -170,7 +175,8 @@ def actions_for(st: Station) -> tuple[list[Action], list[Action]]:
 def web_url(kind: str, call: str) -> str:
     call = urllib.parse.quote(call.upper().split("-")[0].replace("#", ""))
     return {"qrz": f"https://www.qrz.com/db/{call}", "hamqth": f"https://www.hamqth.com/{call}",
-            "psk": f"https://pskreporter.info/pskmap.html?callsign={call}"}[kind]
+            "psk": f"https://pskreporter.info/pskmap.html?callsign={call}", "amsat": "https://www.amsat.org/status/",
+            "kiwi": "https://rx.kiwisdr.com/", "websdr": "https://websdr.org/"}[kind]
 
 
 # ---------------------------------------------------------------------------------------------- RBN / cluster

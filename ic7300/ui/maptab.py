@@ -12,7 +12,7 @@ import numpy as np
 import pyqtgraph as pg
 from PySide6 import QtCore, QtGui, QtWidgets
 
-from .. import geo, mapdata, propagation, stations
+from .. import geo, heatmap, mapdata, propagation, satellites, stations
 from ..bands import BandPlan
 from ..dxcc import Cty
 from ..spots import ClusterClient, Spot, parse_dx_line
@@ -30,6 +30,7 @@ LAYERS = {
     "wspr": ("WSPR (wspr.live)", (255, 105, 180)),
     "rbn": ("Reverse Beacon Network", (255, 90, 90)),
     "lista": ("Lista importada (gateways etc.)", (0, 230, 200)),
+    "sat": ("Satélites amadores (aprox.)", (255, 255, 120)),
     "busca": ("Indicativo procurado", (255, 255, 255)),
 }
 
@@ -43,6 +44,23 @@ class Point:
     station: Optional[Station] = None
 
 
+HEAT_LAYERS = (
+    ("none", "Sem mapa de calor"),
+    ("prop", "Propagação estimada (frequência do rádio)"),
+    ("drap", "Absorção da região D (NOAA D-RAP)"),
+    ("aurora", "Aurora (NOAA OVATION)"),
+    ("cloud", "Nuvens (Open-Meteo)"),
+    ("rain", "Precipitação / tempestades (Open-Meteo)"),
+)
+HEAT_LEGEND = {
+    "prop": "Chance estimada de a frequência atual fechar com o seu QTH: vermelho fechada, verde boa. Estimativa simplificada, não é VOACAP.",
+    "drap": "Cor forte: a frequência atual está sendo absorvida (apagão de HF) nessa região. Dados do NOAA D-RAP.",
+    "aurora": "Probabilidade de aurora (NOAA OVATION, previsão de 30 a 90 min): afeta VHF/HF em altas latitudes.",
+    "cloud": "Cobertura de nuvens agora (grade de 10°). Em VHF/UHF, tempo estável e nuvens baixas podem indicar dutos.",
+    "rain": "Precipitação agora (grade de 10°): chuva forte e tempestades geram ruído em HF e atenuam bandas altas.",
+}
+
+
 class MapTab(QtWidgets.QWidget):
     _solar_ready = QtCore.Signal(object)
     _psk_ready = QtCore.Signal(object, bool)
@@ -50,11 +68,16 @@ class MapTab(QtWidgets.QWidget):
     solar_updated = QtCore.Signal(object)
     _band_ready = QtCore.Signal(object, str)
     _rbn_spot = QtCore.Signal(object)
+    station_selected = QtCore.Signal(object)
+    _sats_ready = QtCore.Signal(object)
     action_requested = QtCore.Signal(object, str)   # (Station, chave da ação) tratada pela janela principal
 
-    def __init__(self, plan: BandPlan, cty: Cty) -> None:
+    def __init__(self, plan: BandPlan, cty: Cty, space=None) -> None:
         super().__init__()
         self.plan, self.cty = plan, cty
+        self.space = space
+        self.sats: list = []
+        self._sat_by_name: dict = {}
         self.home: Optional[tuple[float, float]] = None
         self.call = ""
         self.solar: Optional[propagation.SolarData] = None
@@ -80,11 +103,27 @@ class MapTab(QtWidgets.QWidget):
         self._zoomed = False
         vb.sigRangeChangedManually.connect(lambda *_: setattr(self, "_zoomed", True))
         self.fit_world()
-        lay.addWidget(self.plot, 4)
+        left = QtWidgets.QVBoxLayout()
+        bar = QtWidgets.QHBoxLayout()
+        bar.addWidget(QtWidgets.QLabel("Mapa de calor:"))
+        self.cb_heat = QtWidgets.QComboBox()
+        for k, name in HEAT_LAYERS:
+            self.cb_heat.addItem(name, k)
+        bar.addWidget(self.cb_heat)
+        self.lbl_heat_legend = QtWidgets.QLabel("")
+        self.lbl_heat_legend.setWordWrap(True)
+        self.lbl_heat_legend.setStyleSheet("color:#9aa7b6;font-size:8pt")
+        bar.addWidget(self.lbl_heat_legend, 1)
+        left.addLayout(bar)
+        left.addWidget(self.plot, 1)
+        lay.addLayout(left, 4)
 
         self.night = pg.ImageItem()
         self.night.setZValue(-20)
         self.plot.addItem(self.night)
+        self.heatimg = pg.ImageItem()
+        self.heatimg.setZValue(-19)
+        self.plot.addItem(self.heatimg)
         self._grid_curve = self._line_item(self._graticule(), "#22304a", 1, -15)
         self._coast = self._line_item(mapdata.load_lines("coast"), "#6b7a90", 1, -10)
         self._borders = self._line_item(mapdata.load_lines("borders"), "#2e3b50", 1, -12)
@@ -178,6 +217,11 @@ class MapTab(QtWidgets.QWidget):
         self.btn_solar.clicked.connect(self.refresh_solar)
         self.btn_psk.clicked.connect(self.refresh_psk)
         self._solar_ready.connect(self._on_solar)
+        self._sats_ready.connect(self._on_sats)
+        self.cb_heat.currentIndexChanged.connect(self._heat_changed)
+        if self.space:
+            self.space.layer_ready.connect(lambda _k: self._update_heat())
+            self.space.changed.connect(self._update_heat)
         self._psk_ready.connect(self._on_psk)
         self._band_ready.connect(self._on_stations)
         self._rbn_spot.connect(self._on_rbn_spot)
@@ -245,6 +289,8 @@ class MapTab(QtWidgets.QWidget):
         for pts in self.points.values():
             pts[:] = [p for p in pts if p.stamp > cutoff]
         self._refresh_layers()
+        self._update_sats()
+        self._update_heat()
         if self._ticks % 15 == 0:
             self.refresh_solar()
 
@@ -337,6 +383,8 @@ class MapTab(QtWidgets.QWidget):
     def _on_solar(self, s: propagation.SolarData) -> None:
         self.solar = s
         self.solar_updated.emit(s)
+        if self.space:
+            self.space.set_solar(s)
         self.lbl_solar.setText(f"SFI {s.sfi} · A {s.a_index} · K {s.k_index} · Manchas {s.sunspots}\n"
                                f"Raios-X {s.xray} · Vento solar {s.solar_wind:.0f} km/s · Geomag: {s.geomag}\n"
                                f"Atualizado: {s.updated}")
@@ -431,6 +479,9 @@ class MapTab(QtWidgets.QWidget):
         self.btn_wwff = QtWidgets.QPushButton("WWFF agora (parques e florestas)")
         g.addWidget(self.btn_wwff, 5, 0, 1, 4)
         self.btn_wwff.clicked.connect(self.refresh_wwff)
+        self.btn_sat = QtWidgets.QPushButton("Satélites amadores agora (CelesTrak)")
+        g.addWidget(self.btn_sat, 6, 0, 1, 4)
+        self.btn_sat.clicked.connect(self.refresh_sats)
         self.btn_import = QtWidgets.QPushButton("Importar lista de estações (CSV/TXT)…")
         self.btn_import.setToolTip("Para fontes que você baixa em arquivo, como a lista de gateways do Winlink. "
                                    "Colunas reconhecidas: indicativo, frequência, modo, grid, lat, lon. Texto solto também funciona.")
@@ -473,8 +524,18 @@ class MapTab(QtWidgets.QWidget):
                 self.select_station(st)
 
     def search_call(self) -> None:
-        call = self.ed_search.text().strip().upper()
+        self.search(self.ed_search.text())
+
+    def search(self, text: str) -> None:
+        call = text.strip().upper()
         if not call:
+            return
+        if _GRID_WORD.match(call):
+            lat, lon = geo.grid_to_latlon(call[:6] if len(call) >= 6 else call[:4])
+            st = Station(f"Grid {call}", 0, "", "busca", lat, lon, grid=call, info="Quadrícula Maidenhead")
+            self.points["busca"] = [Point(lat, lon, st.call, time.time(), st)]
+            self._refresh_layers()
+            self.select_station(st)
             return
         ent = self.cty.lookup(call)
         if not ent:
@@ -487,6 +548,7 @@ class MapTab(QtWidgets.QWidget):
 
     def select_station(self, st: Station) -> None:
         self.selected = st
+        self.station_selected.emit(st)
         self.lbl_sel.setText(st.label())
         info = [f"Fonte: {stations.SOURCES.get(st.source, st.source)}"]
         if st.spotter:
@@ -504,6 +566,10 @@ class MapTab(QtWidgets.QWidget):
                 day = propagation.is_daytime(*self.home)
                 cond = self.solar.condition_for(band, day)
                 info.append(f"propagação agora em {band}: {propagation.CONDITION_PT.get(cond, '—')}")
+        if st.source == "sat" and self.home and st.call in self._sat_by_name:
+            passes = satellites.next_passes(self._sat_by_name[st.call], self.home[0], self.home[1], hours=24)[:3]
+            info.append("próximas passagens (UTC, aproximadas): " + ("; ".join(
+                f"{p.aos:%H:%M}-{p.los:%H:%M} máx {p.max_el:.0f}°" for p in passes) or "nenhuma acima de 10° em 24 h"))
         self.lbl_sel_info.setText(" · ".join(info))
         while self.actions_box.count():
             w = self.actions_box.takeAt(0).widget()
@@ -584,6 +650,98 @@ class MapTab(QtWidgets.QWidget):
 
         self._status.emit("WWFF: consultando…")
         threading.Thread(target=work, daemon=True).start()
+
+    # satélites, mapa de calor
+    def refresh_sats(self) -> None:
+        def work() -> None:
+            try:
+                self._sats_ready.emit(satellites.fetch_sats())
+            except Exception as exc:
+                self._status.emit(f"CelesTrak: {exc}")
+
+        self._status.emit("CelesTrak: baixando elementos orbitais…")
+        threading.Thread(target=work, daemon=True).start()
+
+    def _on_sats(self, sats: list) -> None:
+        self.sats = sats
+        self._sat_by_name = {s.name: s for s in sats}
+        self._update_sats()
+        self._status.emit(f"Satélites: {len(sats)} no mapa (posição aproximada, atualiza a cada minuto).")
+
+    def _update_sats(self) -> None:
+        if not self.sats:
+            return
+        now = datetime.now(timezone.utc)
+        self.points["sat"].clear()
+        for s in self.sats:
+            lat, lon, alt = satellites.subpoint(s, now)
+            info = f"altitude {alt:.0f} km"
+            if self.home:
+                el, az = satellites.look_angles(s, now, self.home[0], self.home[1])
+                info += f", visto daí: elevação {el:.0f}°, azimute {az:.0f}°"
+            self.add_station("sat", Station(s.name, 0, "SAT", "sat", lat, lon, info=info), refresh=False)
+        self._refresh_layers()
+
+    def _heat_changed(self) -> None:
+        key = self.cb_heat.currentData()
+        if self.space:
+            if key == "aurora":
+                self.space.ensure_aurora()
+            elif key in ("cloud", "rain"):
+                self.space.ensure_weather(key)
+            elif key == "drap" and self.space.drap is None:
+                self.space.refresh()
+        self._update_heat()
+
+    def _set_heat(self, rgba: np.ndarray, x0: float, y0: float, w: float, h: float) -> None:
+        self.heatimg.setImage(np.transpose(rgba, (1, 0, 2)), autoLevels=False)
+        self.heatimg.setRect(QtCore.QRectF(x0, y0, w, h))
+
+    def _update_heat(self) -> None:
+        key = self.cb_heat.currentData()
+        sp = self.space
+        if not key or key == "none" or sp is None:
+            self.heatimg.clear()
+            self.lbl_heat_legend.setText("")
+            return
+        legend = HEAT_LEGEND[key]
+        freq = self.dial() if self.dial else 0
+        if key == "prop":
+            if not (self.home and freq and self.solar):
+                self.heatimg.clear()
+                legend = "Precisa do seu local (Local / GPS), da frequência do rádio e dos índices solares."
+            else:
+                kp = sp.sw.kp if sp.sw else float(self.solar.k_index)
+                lats, lons, z = heatmap.estimate_grid(self.home, freq, self.solar.sfi, kp, datetime.now(timezone.utc), sp.drap)
+                st = lons[1] - lons[0]
+                self._set_heat(heatmap.colorize(z, "prop"), lons[0] - st / 2, lats[0] - st / 2, 360 + st, 180 + st)
+                legend = f"{freq / 1e6:.3f} MHz: " + legend
+        elif key == "drap":
+            if sp.drap is None:
+                legend = "Carregando D-RAP…"
+            else:
+                lats, lons, hz = sp.drap
+                f = max((freq or 14_000_000) / 1e6, 1.0)
+                self._set_heat(heatmap.colorize(np.clip(hz / f, 0, 1), "seq"), -180, -90, 360, 180)
+                legend = f"{f:.3f} MHz: " + legend
+        elif key == "aurora":
+            if sp.aurora is None:
+                legend = "Carregando aurora…"
+            else:
+                g = np.roll(sp.aurora[0], 180, axis=1)
+                self._set_heat(heatmap.colorize(np.clip(g / 50.0, 0, 1), "seq"), -180, -90.5, 360, 181)
+                legend += f" Previsão {sp.aurora[1]}."
+        else:
+            wx = sp.wx.get(key)
+            if wx is None:
+                legend = "Consultando o Open-Meteo (grade global)…"
+            else:
+                lats, lons, z, _t = wx
+                scale = 100.0 if key == "cloud" else 3.0
+                st = lons[1] - lons[0]
+                self._set_heat(heatmap.colorize(np.clip(z / scale, 0, 1), "seq"), lons[0] - st / 2, lats[0] - st / 2,
+                               st * len(lons), st * len(lats))
+        self.lbl_heat_legend.setText(legend)
 
     def import_list(self) -> None:
         path, _ = QtWidgets.QFileDialog.getOpenFileName(self, "Lista de estações", "", "Listas (*.csv *.txt *.tsv);;Todos (*)")

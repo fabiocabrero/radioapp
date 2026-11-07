@@ -44,6 +44,9 @@ class Settings:
     license_class: str = ""  # legado: classe do plano brasileiro (migrada para classes_by_plan)
     classes_by_plan: dict = field(default_factory=dict)
     contest_name: str = ""
+    hamqth_user: str = ""
+    hamqth_pass: str = ""  # guardada em texto no perfil local do usuário
+    panel_open: bool = True
     cabrillo: dict = field(default_factory=dict)
 
     @classmethod

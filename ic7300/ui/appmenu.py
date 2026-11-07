@@ -30,6 +30,7 @@ SECTIONS: tuple[tuple[str, tuple[AppEntry, ...]], ...] = (
     )),
     ("Informação", (
         AppEntry("map", "🗺", "Mapa de estações", "PSK Reporter, WSPR, RBN, spots e conexão"),
+        AppEntry("sats", "🛰", "Satélites", "Passagens no seu QTH, frequências e Doppler"),
         AppEntry("swl", "🌍", "Ondas curtas", "Emissoras no ar, horários e alvo"),
         AppEntry("bands", "📊", "Plano de bandas", "Faixas, classes e modos do seu país"),
     )),

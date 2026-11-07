@@ -74,7 +74,10 @@ def test_psk_to_stations():
     assert [s.call for s in got] == ["EA3FF"] and got[0].spotter == "K1ABC"
 
 
-def test_map_tab_click_and_actions():
+def test_map_tab_click_and_actions(monkeypatch):
+    import time
+    from ic7300 import propagation as prop
+    monkeypatch.setattr(prop, "fetch_solar", lambda *a, **k: (_ for _ in ()).throw(OSError("offline")))
     from PySide6 import QtWidgets
     from ic7300.bands import BandPlan
     from ic7300.dxcc import Cty
@@ -97,6 +100,11 @@ def test_map_tab_click_and_actions():
     assert tab.points["busca"] and tab.selected.call == "PY2XX"
     tab._on_stations([Station("DL2NL", 7_040_090, "WSPR", "wspr", 51.4, 6.9)], "wspr")
     assert len(tab.points["wspr"]) == 1
+    time.sleep(0.8)
+    app.processEvents()
+    tab.timer.stop()
+    tab.rbn_timer.stop()
+    tab.deleteLater()
     app.processEvents()
 
 

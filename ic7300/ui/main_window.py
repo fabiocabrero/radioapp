@@ -29,7 +29,10 @@ from .extappstab import ExtAppsTab
 from .protocolstab import ProtocolsTab
 from .sstvtab import SstvTab
 from .. import stations
+from .contextpanel import ContextPanel
 from .maptab import MapTab
+from .satellitestab import SatellitesTab
+from .spacedata import SpaceData
 from .potatab import PotaTab
 from .swltab import SwlTab
 from .widgets import FrequencyDisplay, SpectrumView
@@ -118,7 +121,10 @@ class MainWindow(QtWidgets.QMainWindow):
         root.setSpacing(0)
         root.addWidget(self._build_header())
         self.stack = QtWidgets.QStackedWidget()
-        root.addWidget(self.stack, 1)
+        self.space = SpaceData()
+        self.splitter = QtWidgets.QSplitter(QtCore.Qt.Orientation.Horizontal)
+        self.splitter.addWidget(self.stack)
+        root.addWidget(self.splitter, 1)
         self.pages: dict[str, QtWidgets.QWidget] = {}
         self._titles: dict[str, str] = {}
         self._current_page = "radio"
@@ -145,10 +151,14 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ext.rigctl_requested.connect(self._want_rigctl)
         self.ext.message.connect(self.bridge.message.emit)
         self._add_page("ext", "Winlink e outros", self.ext)
-        self.map = MapTab(self.plan, self.cty)
-        self.map.dial = lambda: self.state.freq
+        self.map = MapTab(self.plan, self.cty, self.space)
+        self.map.dial = lambda: self.state.freq if self.radio else 0
         self.map.action_requested.connect(self._station_action)
         self._add_page("map", "Mapa e propagação", self.map)
+        self.sats = SatellitesTab(self._home)
+        self.sats.tune_requested.connect(self._protocol_tune)
+        self.sats.message.connect(self.bridge.message.emit)
+        self._add_page("sats", "Satélites", self.sats)
         self.swl = SwlTab(self.plan)
         self.map.solar_updated.connect(self.swl.set_solar)
         self.swl.tune_requested.connect(self._swl_tune)
@@ -164,6 +174,19 @@ class MainWindow(QtWidgets.QMainWindow):
         self._add_page("log", "Log", self._tab_log())
         self._add_page("location", "Local / GPS", self._tab_location())
         self._add_page("settings", "Configurações", self._page_settings())
+
+        self.panel = ContextPanel(self.settings, self.cty, self.plan, self.space,
+                                  lambda: self.state.freq if self.radio else 0, self._home)
+        self.splitter.addWidget(self.panel)
+        self.splitter.setStretchFactor(0, 1)
+        self.splitter.setStretchFactor(1, 0)
+        self.splitter.setCollapsible(0, False)
+        self.splitter.setSizes([1000, 350])
+        self.panel.setVisible(self.settings.panel_open)
+        self.map.station_selected.connect(self.panel.set_station)
+        self.panel.search_requested.connect(self.map.search)
+        self.btn_panel.toggled.connect(self._toggle_panel)
+        QtCore.QTimer.singleShot(800, self.space.refresh)
 
         self.lbl_utc = QtWidgets.QLabel()
         self.lbl_grid = QtWidgets.QLabel()
@@ -190,6 +213,15 @@ class MainWindow(QtWidgets.QMainWindow):
         self.lbl_title.setText(self._titles[key])
         self.btn_home.setChecked(key == "radio")
         self.btn_apps.setChecked(key == "apps")
+
+    def _home(self):
+        s = self.settings
+        return (s.lat, s.lon) if (s.lat or s.lon) else None
+
+    def _toggle_panel(self, on: bool) -> None:
+        self.panel.setVisible(on)
+        self.settings.panel_open = on
+        self.settings.save()
 
     def _go_back(self) -> None:
         self.show_page("apps" if self._current_page not in ("apps", "radio") else "radio")
@@ -218,7 +250,11 @@ class MainWindow(QtWidgets.QMainWindow):
         self.btn_panic.setToolTip("Interrompe qualquer transmissão: PTT, FT8, RTTY, SSTV e CW")
         self.lbl_status = QtWidgets.QLabel("● Desconectado")
         self.btn_connect = QtWidgets.QPushButton("Conectar")
-        for w in (self.lbl_mini, self.lbl_tx, self.btn_panic, self.lbl_status, self.btn_connect):
+        self.btn_panel = QtWidgets.QPushButton("ℹ  Painel")
+        self.btn_panel.setCheckable(True)
+        self.btn_panel.setChecked(self.settings.panel_open)
+        self.btn_panel.setToolTip("Propagação, localidade do contato e radioperador (aparece em todas as telas)")
+        for w in (self.lbl_mini, self.lbl_tx, self.btn_panic, self.btn_panel, self.lbl_status, self.btn_connect):
             h.addWidget(w)
         return bar
 
